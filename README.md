@@ -7,7 +7,7 @@ A simple, sudo-free package manager for Ubuntu/Linux systems. Install packages t
 Install Leaf with a single command:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/yourusername/leaf/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
 ```
 
 Then restart your terminal or run:

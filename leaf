@@ -278,7 +278,7 @@ def update_packages():
     print("🔄 Updating package list...")
     
     # For now, we'll use a static URL. In production, this would be your repo's packages.json
-    packages_url = "https://raw.githubusercontent.com/yourusername/leaf/main/packages.json"
+    packages_url = "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/packages.json"
     
     if download_file(packages_url, PACKAGES_FILE, show_progress=False):
         print_success("Package list updated successfully")

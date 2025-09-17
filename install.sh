@@ -15,11 +15,11 @@ mkdir -p "$LEAF_DIR" "$BIN_DIR"
 
 # Download the main leaf script
 echo "Downloading leaf binary..."
-curl -sSL "https://raw.githubusercontent.com/yourusername/leaf/main/leaf" -o "$BIN_DIR/leaf"
+curl -sSL "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/leaf" -o "$BIN_DIR/leaf"
 chmod +x "$BIN_DIR/leaf"
 
 # Download package definitions
-curl -sSL "https://raw.githubusercontent.com/yourusername/leaf/main/packages.json" -o "$LEAF_DIR/packages.json"
+curl -sSL "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/packages.json" -o "$LEAF_DIR/packages.json"
 
 # Add to PATH if not already there
 SHELL_RC=""
