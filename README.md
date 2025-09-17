@@ -6,18 +6,18 @@ A fast, simple, and sudo-free package manager for Linux and macOS, written in Ru
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue.svg)](https://github.com/ktauchathuranga/leaf)
 
-## ✨ Features
+## Features
 
-- 🚀 **Fast & Lightweight** - Written in Rust for optimal performance
-- 🔒 **No sudo required** - Install packages in your user space
-- 📦 **Simple commands** - Easy-to-use CLI interface
-- 🌍 **Cross-platform** - Supports Linux (x86_64, ARM64) and macOS (Intel, Apple Silicon)
-- 🎯 **Smart package management** - Automatic dependency handling and symlink creation
-- 💾 **Efficient caching** - Downloads are cached for faster reinstalls
-- 🔍 **Package search** - Find packages with fuzzy search
-- 📋 **Package registry** - Curated list of popular development tools
+- **Fast & Lightweight** - Written in Rust for optimal performance
+- **No sudo required** - Install packages in your user space
+- **Simple commands** - Easy-to-use CLI interface
+- **Cross-platform** - Supports Linux (x86_64, ARM64) and macOS (Intel, Apple Silicon)
+- **Smart package management** - Automatic dependency handling and symlink creation
+- **Efficient caching** - Downloads are cached for faster reinstalls
+- **Package search** - Find packages with fuzzy search
+- **Package registry** - Curated list of popular development tools
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
@@ -51,7 +51,7 @@ leaf remove nvim
 leaf update
 ```
 
-## 📚 Commands
+## Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -63,7 +63,7 @@ leaf update
 | `leaf --help` | Show help information | `leaf --help` |
 | `leaf --version` | Show version information | `leaf --version` |
 
-## 📦 Available Packages
+## Available Packages
 
 Leaf includes a curated selection of popular development tools and utilities:
 
@@ -92,9 +92,9 @@ Leaf includes a curated selection of popular development tools and utilities:
 - `go` - Go programming language
 - `zig` - Zig programming language
 
-*And many more! Use `leaf search .` to see all available packages.*
+*Use `leaf search .` to see all available packages.*
 
-## 🛠️ How It Works
+## How It Works
 
 1. **User-space installation**: All packages are installed in `~/.local/leaf/packages/`
 2. **Automatic PATH management**: Executables are symlinked to `~/.local/bin/`
@@ -102,7 +102,7 @@ Leaf includes a curated selection of popular development tools and utilities:
 4. **Metadata tracking**: Each installation is tracked with version and file information
 5. **Clean removal**: Removes all files and symlinks when uninstalling
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 ~/.local/leaf/
@@ -115,7 +115,7 @@ Leaf includes a curated selection of popular development tools and utilities:
 ~/.local/bin/          # Executable symlinks (added to PATH)
 ```
 
-## 🔧 Configuration
+## Configuration
 
 Leaf stores its configuration in `~/.local/leaf/config.json`:
 
@@ -129,7 +129,7 @@ Leaf stores its configuration in `~/.local/leaf/config.json`:
 }
 ```
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Here's how you can help:
 
@@ -169,13 +169,13 @@ We welcome contributions! Here's how you can help:
    cargo test
    ```
 
-## 📋 Requirements
+## Requirements
 
 - **Linux**: glibc 2.17+ (most distributions from 2012+)
 - **macOS**: macOS 10.12+ (Sierra)
 - **Architecture**: x86_64 or ARM64
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Command not found after installation
 
@@ -199,7 +199,7 @@ Update the package list:
 leaf update
 ```
 
-## 🔄 Migration from Python Version
+## Migration from Python Version
 
 If you're upgrading from the Python version of Leaf:
 
@@ -215,35 +215,35 @@ If you're upgrading from the Python version of Leaf:
 
 3. Your existing packages and configuration will be preserved.
 
-## 📊 Comparison
+## Comparison
 
 | Feature | Leaf | Homebrew | Snap | AppImage |
 |---------|------|----------|------|----------|
-| Sudo required | ❌ | ❌ | ✅ | ❌ |
-| User-space install | ✅ | ✅ | ❌ | ✅ |
-| Fast execution | ✅ | ✅ | ❌ | ✅ |
-| Simple CLI | ✅ | ✅ | ✅ | ❌ |
-| Cross-platform | ✅ | ✅ | ❌ | ✅ |
+| Sudo required | No | No | Yes | No |
+| User-space install | Yes | Yes | No | Yes |
+| Fast execution | Yes | Yes | No | Yes |
+| Simple CLI | Yes | Yes | Yes | No |
+| Cross-platform | Yes | Yes | No | Yes |
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [Rust](https://rust-lang.org/) for performance and safety
 - Inspired by package managers like Homebrew and Scoop
 - Uses GitHub Actions for automated binary builds
 - Special thanks to all contributors and package maintainers
 
-## 📞 Support
+## Support
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/ktauchathuranga/leaf/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/ktauchathuranga/leaf/discussions)
-- 📧 **Email**: [your.email@example.com](mailto:your.email@example.com)
+- **Issues**: [GitHub Issues](https://github.com/ktauchathuranga/leaf/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ktauchathuranga/leaf/discussions)
+- **Contact**: ktauchathuranga@github.com
 
 ---
 
 <p align="center">
-  <strong>🍃 Happy package managing with Leaf! 🍃</strong>
+  <strong>Happy package managing with Leaf!</strong>
 </p>
