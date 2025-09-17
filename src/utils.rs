@@ -1,4 +1,4 @@
-use colored::{ColoredString, Colorize};
+use colored::Colorize;
 
 pub fn print_success(msg: &str) {
     println!("{} {}", "✓".green(), msg);
@@ -16,6 +16,3 @@ pub fn print_warning(msg: &str) {
     println!("{} {}", "⚠".yellow(), msg);
 }
 
-pub fn bold(text: &str) -> ColoredString {
-    text.bold()
-}

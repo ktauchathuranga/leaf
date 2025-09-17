@@ -11,6 +11,13 @@ REPO="ktauchathuranga/leaf"
 
 echo "🍃 Installing Leaf Package Manager..."
 
+# Check if leaf is already installed and warn about nuke
+if [ -f "$BIN_DIR/leaf" ]; then
+    echo "⚠️  Leaf is already installed."
+    echo "If you want to completely remove it first, run: leaf nuke --confirmed"
+    echo "Continuing with installation/update..."
+fi
+
 # Detect platform
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -143,11 +150,12 @@ fi
 
 echo ""
 echo "Usage:"
-echo "  leaf install <package>  # Install a package"
-echo "  leaf remove <package>   # Remove a package"
-echo "  leaf list              # List installed packages"
-echo "  leaf search <term>     # Search available packages"
-echo "  leaf update            # Update package list"
+echo "  leaf install <package>        # Install a package"
+echo "  leaf remove <package>         # Remove a package"
+echo "  leaf list                     # List installed packages"
+echo "  leaf search <term>            # Search available packages"
+echo "  leaf update                   # Update package list"
+echo "  leaf nuke --confirmed         # Remove everything (DESTRUCTIVE)"
 echo ""
 echo "To get started, restart your terminal or run:"
 echo "  source $SHELL_RC"

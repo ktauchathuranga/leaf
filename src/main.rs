@@ -1,67 +1,94 @@
-mod package_manager;
 mod config;
-mod package;
 mod installer;
+mod package;
+mod package_manager;
 mod utils;
 
-use clap::{Parser, Subcommand};
-use anyhow::Result;
-use package_manager::PackageManager;
-
-#[derive(Parser)]
-#[command(name = "leaf")]
-#[command(about = "🍃 Leaf Package Manager - A simple, sudo-free package manager")]
-#[command(version = "1.0.0")]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Install a package
-    Install {
-        /// Package name to install
-        package: String,
-    },
-    /// Remove an installed package
-    Remove {
-        /// Package name to remove
-        package: String,
-    },
-    /// List installed packages
-    List,
-    /// Search for packages
-    Search {
-        /// Search term
-        term: String,
-    },
-    /// Update package definitions
-    Update,
-}
+use crate::package_manager::PackageManager;
+use crate::utils::print_error;
+use clap::{Arg, Command};
+use std::process;
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    let cli = Cli::parse();
-    let mut pm = PackageManager::new().await?;
+async fn main() {
+    let matches = Command::new("leaf")
+        .version("1.0.0")
+        .author("ktauchathuranga")
+        .about("🍃 A simple, sudo-free package manager")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommand(
+            Command::new("install").about("Install a package").arg(
+                Arg::new("package")
+                    .help("Package name to install")
+                    .required(true)
+                    .index(1),
+            ),
+        )
+        .subcommand(
+            Command::new("remove")
+                .about("Remove an installed package")
+                .arg(
+                    Arg::new("package")
+                        .help("Package name to remove")
+                        .required(true)
+                        .index(1),
+                ),
+        )
+        .subcommand(Command::new("list").about("List installed packages"))
+        .subcommand(
+            Command::new("search")
+                .about("Search available packages")
+                .arg(Arg::new("term").help("Search term").required(true).index(1)),
+        )
+        .subcommand(Command::new("update").about("Update package definitions"))
+        .subcommand(
+            Command::new("nuke")
+                .about("Remove all packages and Leaf itself (DESTRUCTIVE)")
+                .arg(
+                    Arg::new("confirmed")
+                        .long("confirmed")
+                        .help("Confirm the nuclear option")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .get_matches();
 
-    match cli.command {
-        Commands::Install { package } => {
-            pm.install_package(&package).await?;
+    let mut pm = match PackageManager::new().await {
+        Ok(pm) => pm,
+        Err(e) => {
+            print_error(&format!("Failed to initialize package manager: {}", e));
+            process::exit(1);
         }
-        Commands::Remove { package } => {
-            pm.remove_package(&package).await?;
+    };
+
+    let result = match matches.subcommand() {
+        Some(("install", sub_matches)) => {
+            let package = sub_matches.get_one::<String>("package").unwrap();
+            pm.install_package(package).await
         }
-        Commands::List => {
-            pm.list_packages().await?;
+        Some(("remove", sub_matches)) => {
+            let package = sub_matches.get_one::<String>("package").unwrap();
+            pm.remove_package(package).await
         }
-        Commands::Search { term } => {
-            pm.search_packages(&term).await?;
+        Some(("list", _)) => pm.list_packages().await,
+        Some(("search", sub_matches)) => {
+            let term = sub_matches.get_one::<String>("term").unwrap();
+            pm.search_packages(term).await
         }
-        Commands::Update => {
-            pm.update_packages().await?;
+        Some(("update", _)) => pm.update_packages().await,
+        Some(("nuke", sub_matches)) => {
+            let confirmed = sub_matches.get_flag("confirmed");
+            pm.nuke_everything(confirmed).await
         }
+        _ => {
+            print_error("Unknown command");
+            Ok(())
+        }
+    };
+
+    if let Err(e) = result {
+        print_error(&format!("Error: {}", e));
+        process::exit(1);
     }
-
-    Ok(())
 }

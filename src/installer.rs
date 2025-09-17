@@ -1,3 +1,5 @@
+use crate::config::Config;
+use crate::package::Package;
 use anyhow::Result;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -20,6 +22,34 @@ impl Installer {
         }
     }
 
+    pub async fn install_package(
+        &self,
+        name: &str,
+        package: &Package,
+        config: &Config,
+    ) -> Result<()> {
+        let package_dir = config.packages_dir.join(name);
+        let cache_dir = &config.cache_dir;
+
+        // Create package directory
+        tokio::fs::create_dir_all(&package_dir).await?;
+        tokio::fs::create_dir_all(cache_dir).await?;
+
+        // Determine filename from URL
+        let url_path = package.url.split('/').last().unwrap_or("archive");
+        let cache_file = cache_dir.join(format!("{}_{}", name, url_path));
+
+        // Download if not cached
+        if !cache_file.exists() {
+            self.download_file(&package.url, &cache_file).await?;
+        }
+
+        // Extract archive
+        self.extract_archive(&cache_file, &package_dir).await?;
+
+        Ok(())
+    }
+
     pub async fn download_file(&self, url: &str, filepath: &Path) -> Result<()> {
         let response = self.client.get(url).send().await?;
         let total_size = response.content_length().unwrap_or(0);
@@ -35,8 +65,8 @@ impl Installer {
         let mut stream = response.bytes_stream();
         let mut downloaded = 0u64;
 
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result?;
             file.write_all(&chunk).await?;
             downloaded += chunk.len() as u64;
             pb.set_position(downloaded);

@@ -41,5 +41,29 @@
     "type": "archive",
     "executables": ["bat-v0.24.0-x86_64-unknown-linux-gnu/bat"],
     "tags": ["cat", "syntax", "highlighting", "cli"]
+  },
+  "ripgrep": {
+    "description": "A line-oriented search tool that recursively searches the current directory for a regex pattern",
+    "url": "https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz",
+    "version": "14.1.0",
+    "type": "archive",
+    "executables": ["ripgrep-14.1.0-x86_64-unknown-linux-musl/rg"],
+    "tags": ["search", "grep", "regex", "cli"]
+  },
+  "exa": {
+    "description": "A modern replacement for ls",
+    "url": "https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip",
+    "version": "0.10.1",
+    "type": "archive",
+    "executables": ["bin/exa"],
+    "tags": ["ls", "directory", "listing", "cli"]
+  },
+  "jq": {
+    "description": "Command-line JSON processor",
+    "url": "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64",
+    "version": "1.7.1",
+    "type": "binary",
+    "executables": ["jq-linux-amd64"],
+    "tags": ["json", "processor", "cli", "parser"]
   }
 }

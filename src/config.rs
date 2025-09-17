@@ -42,8 +42,5 @@ impl Config {
 
         Ok(config)
     }
-
-    pub fn packages_file(&self) -> PathBuf {
-        self.install_dir.join("packages.json")
-    }
 }
+
