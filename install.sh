@@ -1,25 +1,104 @@
 #!/bin/bash
-# Leaf Package Manager Installation Script
-# Usage: curl -sSL https://raw.githubusercontent.com/yourusername/leaf/main/install.sh | bash
+# Leaf Package Manager Installation Script (Pre-compiled Binary)
+# Usage: curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
 
 set -e
 
 LEAF_DIR="$HOME/.local/leaf"
 BIN_DIR="$HOME/.local/bin"
-LEAF_VERSION="v1.0.0"
+LEAF_VERSION="latest"
+REPO="ktauchathuranga/leaf"
 
 echo "🍃 Installing Leaf Package Manager..."
+
+# Detect platform
+OS="$(uname -s)"
+ARCH="$(uname -m)"
+
+case "$OS" in
+    Linux*)
+        case "$ARCH" in
+            x86_64)
+                PLATFORM="linux-x86_64"
+                ;;
+            aarch64|arm64)
+                PLATFORM="linux-aarch64"
+                ;;
+            *)
+                echo "❌ Unsupported architecture: $ARCH"
+                exit 1
+                ;;
+        esac
+        ;;
+    Darwin*)
+        case "$ARCH" in
+            x86_64)
+                PLATFORM="macos-x86_64"
+                ;;
+            arm64)
+                PLATFORM="macos-aarch64"
+                ;;
+            *)
+                echo "❌ Unsupported architecture: $ARCH"
+                exit 1
+                ;;
+        esac
+        ;;
+    *)
+        echo "❌ Unsupported operating system: $OS"
+        exit 1
+        ;;
+esac
+
+echo "📋 Detected platform: $PLATFORM"
 
 # Create directories
 mkdir -p "$LEAF_DIR" "$BIN_DIR"
 
-# Download the main leaf script
-echo "Downloading leaf binary..."
-curl -sSL "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/leaf" -o "$BIN_DIR/leaf"
+# Get the latest release download URL
+if [ "$LEAF_VERSION" = "latest" ]; then
+    echo "🔍 Finding latest release..."
+    DOWNLOAD_URL=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
+        grep "browser_download_url.*leaf-$PLATFORM.tar.gz" | \
+        cut -d '"' -f 4)
+    
+    if [ -z "$DOWNLOAD_URL" ]; then
+        echo "❌ Could not find release for platform $PLATFORM"
+        echo "Available releases:"
+        curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
+            grep "browser_download_url.*tar.gz" | \
+            cut -d '"' -f 4 | \
+            sed 's/.*leaf-\(.*\)\.tar\.gz/  - \1/'
+        exit 1
+    fi
+else
+    DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LEAF_VERSION/leaf-$PLATFORM.tar.gz"
+fi
+
+echo "📥 Downloading leaf binary..."
+TEMP_DIR=$(mktemp -d)
+TEMP_FILE="$TEMP_DIR/leaf-$PLATFORM.tar.gz"
+
+# Download with progress bar
+if command -v curl >/dev/null 2>&1; then
+    curl -L --progress-bar "$DOWNLOAD_URL" -o "$TEMP_FILE"
+elif command -v wget >/dev/null 2>&1; then
+    wget --progress=bar:force:noscroll "$DOWNLOAD_URL" -O "$TEMP_FILE"
+else
+    echo "❌ Neither curl nor wget found. Please install one of them."
+    exit 1
+fi
+
+# Extract and install
+echo "📦 Extracting binary..."
+cd "$TEMP_DIR"
+tar -xzf "leaf-$PLATFORM.tar.gz"
+cp leaf "$BIN_DIR/leaf"
 chmod +x "$BIN_DIR/leaf"
 
 # Download package definitions
-curl -sSL "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/packages.json" -o "$LEAF_DIR/packages.json"
+echo "📋 Downloading package definitions..."
+curl -sSL "https://raw.githubusercontent.com/$REPO/main/packages.json" -o "$LEAF_DIR/packages.json"
 
 # Add to PATH if not already there
 SHELL_RC=""
@@ -33,7 +112,7 @@ fi
 
 if [ -f "$SHELL_RC" ] && ! grep -q "$BIN_DIR" "$SHELL_RC"; then
     echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> "$SHELL_RC"
-    echo "Added $BIN_DIR to PATH in $SHELL_RC"
+    echo "✅ Added $BIN_DIR to PATH in $SHELL_RC"
 fi
 
 # Create leaf config
@@ -49,8 +128,19 @@ EOF
 
 mkdir -p "$LEAF_DIR/packages" "$LEAF_DIR/cache"
 
-echo ""
-echo "🎉 Leaf Package Manager installed successfully!"
+# Cleanup
+rm -rf "$TEMP_DIR"
+
+# Test installation
+if "$BIN_DIR/leaf" --version >/dev/null 2>&1; then
+    VERSION_INFO=$("$BIN_DIR/leaf" --version)
+    echo ""
+    echo "🎉 Leaf Package Manager installed successfully!"
+    echo "📍 Version: $VERSION_INFO"
+else
+    echo "⚠️  Installation completed but leaf command test failed"
+fi
+
 echo ""
 echo "Usage:"
 echo "  leaf install <package>  # Install a package"

@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary_name: leaf
+            archive_name: leaf-linux-x86_64.tar.gz
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            binary_name: leaf
+            archive_name: leaf-linux-aarch64.tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary_name: leaf
+            archive_name: leaf-macos-x86_64.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary_name: leaf
+            archive_name: leaf-macos-aarch64.tar.gz
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install cross-compilation tools
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache target directory
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Verify binary
+      run: |
+        if [[ ! -f "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" ]]; then
+          echo "❌ Binary not found at target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          exit 1
+        fi
+        echo "✅ Binary built successfully"
+
+    - name: Create archive
+      run: |
+        mkdir -p dist
+        cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/
+        cd dist && tar -czf ../${{ matrix.archive_name }} ${{ matrix.binary_name }}
+        echo "✅ Archive created: ${{ matrix.archive_name }}"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.archive_name }}
+        path: ${{ matrix.archive_name }}
+        retention-days: 5
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+
+    - name: List artifacts
+      run: |
+        echo "Downloaded artifacts:"
+        find ./artifacts -name "*.tar.gz" -type f
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./artifacts/*/*.tar.gz
+        body: |
+          ## Leaf Package Manager ${{ github.ref_name }}
+          
+          🍃 A simple, sudo-free package manager for Linux/macOS written in Rust.
+          
+          ### Installation
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
+          ```
+          
+          ### Supported Platforms
+          - Linux x86_64
+          - Linux ARM64 (aarch64)
+          - macOS x86_64 (Intel)
+          - macOS ARM64 (Apple Silicon)
+          
+          ### Changes in ${{ github.ref_name }}
+          - Rust rewrite for better performance and reliability
+          - Faster package installation and management
+          - Better error handling and user experience
+          - Cross-platform support with optimized binaries
+          
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
