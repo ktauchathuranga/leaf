@@ -1,21 +1,45 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  pull_request:
+    types: [closed]
+    branches:
+      - main
   workflow_dispatch:
-
-env:
-  CARGO_TERM_COLOR: always
 
 permissions:
   contents: write
-  actions: read
+  pull-requests: read
 
 jobs:
+  # This job checks if the release should be triggered and extracts the tag
+  parse_release_info:
+    name: Parse Release Info from PR
+    runs-on: ubuntu-latest
+    # Run only for merged PRs that contain the #release keyword
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.body, '#release')
+    outputs:
+      should_release: ${{ steps.get_tag.outputs.should_release }}
+      tag: ${{ steps.get_tag.outputs.tag }}
+    steps:
+      - name: Get tag from PR body
+        id: get_tag
+        run: |
+          # Extracts 'vX.Y.Z' from a line containing '#release vX.Y.Z'
+          TAG=$(echo "${{ github.event.pull_request.body }}" | grep -oP '#release\s+\K(v[0-9]+\.[0-9]+\.[0-9]+)')
+          if [ -n "$TAG" ]; then
+            echo "Found release tag: $TAG"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          else
+            echo "No release tag found in PR body. Skipping release."
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
     name: Build for ${{ matrix.target }}
+    needs: parse_release_info
+    if: needs.parse_release_info.outputs.should_release == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -25,18 +49,10 @@ jobs:
             target: x86_64-unknown-linux-gnu
             binary_name: leaf
             archive_name: leaf-linux-x86_64.tar.gz
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            binary_name: leaf
-            archive_name: leaf-linux-aarch64.tar.gz
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: leaf
             archive_name: leaf-macos-x86_64.tar.gz
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            binary_name: leaf
-            archive_name: leaf-macos-aarch64.tar.gz
 
     steps:
     - name: Checkout code
@@ -47,47 +63,27 @@ jobs:
       with:
         targets: ${{ matrix.target }}
 
-    - name: Install cross-compilation tools
-      if: matrix.target == 'aarch64-unknown-linux-gnu'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
-    - name: Cache cargo registry
-      uses: actions/cache@v3
+    - name: Cache cargo registry, index, and target
+      uses: actions/cache@v4
       with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Cache cargo index
-      uses: actions/cache@v3
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Cache target directory
-      uses: actions/cache@v3
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build
       run: cargo build --release --target ${{ matrix.target }}
 
-    - name: Verify binary
-      run: |
-        if [[ ! -f "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" ]]; then
-          echo "❌ Binary not found at target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
-          exit 1
-        fi
-        echo "✅ Binary built successfully"
-
     - name: Create archive
       run: |
-        mkdir -p dist
-        cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/
-        cd dist && tar -czf ../${{ matrix.archive_name }} ${{ matrix.binary_name }}
+        # Create a temporary directory to package the binary
+        mkdir staging
+        # Copy the binary into the staging directory
+        cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} staging/
+        # Create the tarball from the contents of the staging directory
+        cd staging && tar -czf ../${{ matrix.archive_name }} .
+        cd ..
         echo "✅ Archive created: ${{ matrix.archive_name }}"
 
     - name: Upload artifact
@@ -95,55 +91,37 @@ jobs:
       with:
         name: ${{ matrix.archive_name }}
         path: ${{ matrix.archive_name }}
-        retention-days: 5
+        retention-days: 1
 
   release:
-    name: Create Release
+    name: Create GitHub Release
+    needs: [parse_release_info, build]
+    if: needs.parse_release_info.outputs.should_release == 'true'
     runs-on: ubuntu-latest
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download all artifacts
+    - name: Download all build artifacts
       uses: actions/download-artifact@v4
       with:
         path: ./artifacts
 
-    - name: List artifacts
-      run: |
-        echo "Downloaded artifacts:"
-        find ./artifacts -name "*.tar.gz" -type f
-        
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ needs.parse_release_info.outputs.tag }}
+        name: Release ${{ needs.parse_release_info.outputs.tag }}
         files: ./artifacts/*/*.tar.gz
         body: |
-          ## Leaf Package Manager ${{ github.ref_name }}
-          
+          ## Leaf Package Manager ${{ needs.parse_release_info.outputs.tag }}
+
           🍃 A simple, sudo-free package manager for Linux/macOS written in Rust.
-          
+
           ### Installation
           ```bash
           curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
           ```
-          
-          ### Supported Platforms
-          - Linux x86_64
-          - Linux ARM64 (aarch64)
-          - macOS x86_64 (Intel)
-          - macOS ARM64 (Apple Silicon)
-          
-          ### Changes in ${{ github.ref_name }}
-          - Rust rewrite for better performance and reliability
-          - Faster package installation and management
-          - Better error handling and user experience
-          - Cross-platform support with optimized binaries
-          
+
+          ### Changes in this release
+          See merged pull requests for details.
         draft: false
         prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
