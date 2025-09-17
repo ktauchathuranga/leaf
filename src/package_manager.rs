@@ -377,7 +377,11 @@ impl PackageManager {
         }
 
         print_success("🍃 Leaf and all packages have been nuked!");
-        print_info("Goodbye! Thanks for using Leaf.");
+        print_info("To complete the uninstallation, please remove the executable:");
+        print_info(&format!(
+            "  rm {}",
+            self.config.bin_dir.join("leaf").display()
+        ));
 
         Ok(())
     }
