@@ -1,0 +1,45 @@
+{
+  "nvim": {
+    "description": "Modern terminal-based text editor",
+    "url": "https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz",
+    "version": "stable",
+    "type": "archive",
+    "executables": ["nvim-linux64/bin/nvim"],
+    "tags": ["editor", "vim", "terminal"]
+  },
+  "nodejs": {
+    "description": "JavaScript runtime built on Chrome's V8 JavaScript engine",
+    "url": "https://nodejs.org/dist/v20.8.0/node-v20.8.0-linux-x64.tar.xz",
+    "version": "20.8.0",
+    "type": "archive",
+    "executables": [
+      {"path": "node-v20.8.0-linux-x64/bin/node", "name": "node"},
+      {"path": "node-v20.8.0-linux-x64/bin/npm", "name": "npm"}
+    ],
+    "tags": ["javascript", "runtime", "development"]
+  },
+  "go": {
+    "description": "The Go programming language",
+    "url": "https://go.dev/dl/go1.21.3.linux-amd64.tar.gz",
+    "version": "1.21.3",
+    "type": "archive",
+    "executables": ["go/bin/go"],
+    "tags": ["programming", "golang", "development"]
+  },
+  "fd": {
+    "description": "A simple, fast and user-friendly alternative to find",
+    "url": "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-unknown-linux-gnu.tar.gz",
+    "version": "8.7.0",
+    "type": "archive",
+    "executables": ["fd-v8.7.0-x86_64-unknown-linux-gnu/fd"],
+    "tags": ["find", "search", "cli", "tool"]
+  },
+  "bat": {
+    "description": "A cat clone with wings",
+    "url": "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-unknown-linux-gnu.tar.gz",
+    "version": "0.24.0",
+    "type": "archive",
+    "executables": ["bat-v0.24.0-x86_64-unknown-linux-gnu/bat"],
+    "tags": ["cat", "syntax", "highlighting", "cli"]
+  }
+}

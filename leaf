@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+"""
+🍃 Leaf Package Manager
+A simple, sudo-free package manager for Ubuntu/Linux
+"""
+
+import os
+import sys
+import json
+import urllib.request
+import urllib.parse
+import tarfile
+import zipfile
+import subprocess
+import shutil
+import tempfile
+from pathlib import Path
+from typing import Dict, List, Optional
+
+LEAF_DIR = Path.home() / ".local" / "leaf"
+BIN_DIR = Path.home() / ".local" / "bin"
+PACKAGES_DIR = LEAF_DIR / "packages"
+CACHE_DIR = LEAF_DIR / "cache"
+CONFIG_FILE = LEAF_DIR / "config.json"
+PACKAGES_FILE = LEAF_DIR / "packages.json"
+
+class Colors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+def print_success(msg):
+    print(f"{Colors.GREEN}✓{Colors.END} {msg}")
+
+def print_error(msg):
+    print(f"{Colors.RED}✗{Colors.END} {msg}")
+
+def print_info(msg):
+    print(f"{Colors.BLUE}ℹ{Colors.END} {msg}")
+
+def print_warning(msg):
+    print(f"{Colors.YELLOW}⚠{Colors.END} {msg}")
+
+def load_packages() -> Dict:
+    """Load package definitions"""
+    if not PACKAGES_FILE.exists():
+        print_error("Package definitions not found. Run 'leaf update' first.")
+        return {}
+    
+    try:
+        with open(PACKAGES_FILE, 'r') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print_error("Failed to parse package definitions")
+        return {}
+
+def download_file(url: str, filepath: Path, show_progress: bool = True) -> bool:
+    """Download file with progress bar"""
+    try:
+        def progress_hook(block_num, block_size, total_size):
+            if show_progress and total_size > 0:
+                downloaded = block_num * block_size
+                percent = min(100, (downloaded * 100) // total_size)
+                bar_length = 30
+                filled_length = (percent * bar_length) // 100
+                bar = '█' * filled_length + '░' * (bar_length - filled_length)
+                print(f"\r  📥 [{bar}] {percent}% ({downloaded // 1024}KB/{total_size // 1024}KB)", end='')
+        
+        urllib.request.urlretrieve(url, filepath, progress_hook)
+        if show_progress:
+            print()  # New line after progress bar
+        return True
+    except Exception as e:
+        print_error(f"Download failed: {e}")
+        return False
+
+def extract_archive(filepath: Path, extract_to: Path) -> bool:
+    """Extract tar/zip archives"""
+    try:
+        if filepath.suffix in ['.gz', '.xz', '.bz2'] or filepath.name.endswith('.tar.gz'):
+            with tarfile.open(filepath, 'r:*') as tar:
+                tar.extractall(extract_to)
+        elif filepath.suffix == '.zip':
+            with zipfile.ZipFile(filepath, 'r') as zip_file:
+                zip_file.extractall(extract_to)
+        else:
+            print_error(f"Unsupported archive format: {filepath}")
+            return False
+        return True
+    except Exception as e:
+        print_error(f"Extraction failed: {e}")
+        return False
+
+def install_package(name: str) -> bool:
+    """Install a package"""
+    packages = load_packages()
+    
+    if name not in packages:
+        print_error(f"Package '{name}' not found")
+        print_info(f"Run 'leaf search {name}' to find similar packages")
+        return False
+    
+    pkg = packages[name]
+    pkg_dir = PACKAGES_DIR / name
+    
+    # Check if already installed
+    if pkg_dir.exists():
+        print_warning(f"Package '{name}' is already installed")
+        return True
+    
+    print(f"🍃 Installing {Colors.BOLD}{name}{Colors.END}...")
+    
+    # Create directories
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Download package
+    url = pkg["url"]
+    filename = url.split("/")[-1]
+    cache_file = CACHE_DIR / filename
+    
+    if not cache_file.exists():
+        print_info(f"Downloading {name}...")
+        if not download_file(url, cache_file):
+            shutil.rmtree(pkg_dir, ignore_errors=True)
+            return False
+    else:
+        print_info(f"Using cached download...")
+    
+    # Extract if needed
+    if pkg.get("type") == "archive":
+        print_info("Extracting archive...")
+        if not extract_archive(cache_file, pkg_dir):
+            shutil.rmtree(pkg_dir, ignore_errors=True)
+            return False
+    else:
+        # Copy binary directly
+        shutil.copy2(cache_file, pkg_dir / filename)
+    
+    # Create symlinks for executables
+    executables = pkg.get("executables", [])
+    if isinstance(executables, str):
+        executables = [executables]
+    
+    for exe_info in executables:
+        if isinstance(exe_info, str):
+            exe_path = exe_info
+            link_name = name
+        else:
+            exe_path = exe_info["path"]
+            link_name = exe_info.get("name", name)
+        
+        source_path = pkg_dir / exe_path
+        if not source_path.exists():
+            print_warning(f"Executable not found: {exe_path}")
+            continue
+            
+        link_path = BIN_DIR / link_name
+        
+        # Remove existing symlink
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        
+        # Create new symlink
+        os.symlink(source_path.absolute(), link_path)
+        source_path.chmod(0o755)
+    
+    # Save installation info
+    install_info = {
+        "name": name,
+        "version": pkg.get("version", "unknown"),
+        "installed_files": [str(p.relative_to(pkg_dir)) for p in pkg_dir.rglob("*") if p.is_file()],
+        "executables": executables
+    }
+    
+    with open(pkg_dir / "install.json", 'w') as f:
+        json.dump(install_info, f, indent=2)
+    
+    print_success(f"Successfully installed {name}")
+    return True
+
+def remove_package(name: str) -> bool:
+    """Remove an installed package"""
+    pkg_dir = PACKAGES_DIR / name
+    
+    if not pkg_dir.exists():
+        print_error(f"Package '{name}' is not installed")
+        return False
+    
+    print(f"🗑️  Removing {name}...")
+    
+    # Load install info
+    install_info_file = pkg_dir / "install.json"
+    if install_info_file.exists():
+        with open(install_info_file, 'r') as f:
+            install_info = json.load(f)
+        
+        # Remove symlinks
+        executables = install_info.get("executables", [])
+        for exe_info in executables:
+            if isinstance(exe_info, str):
+                link_name = name
+            else:
+                link_name = exe_info.get("name", name)
+            
+            link_path = BIN_DIR / link_name
+            if link_path.exists() or link_path.is_symlink():
+                link_path.unlink()
+    
+    # Remove package directory
+    shutil.rmtree(pkg_dir)
+    
+    print_success(f"Successfully removed {name}")
+    return True
+
+def list_packages():
+    """List installed packages"""
+    installed = []
+    
+    if not PACKAGES_DIR.exists():
+        print_info("No packages installed")
+        return
+    
+    for pkg_dir in PACKAGES_DIR.iterdir():
+        if pkg_dir.is_dir():
+            install_info_file = pkg_dir / "install.json"
+            if install_info_file.exists():
+                with open(install_info_file, 'r') as f:
+                    install_info = json.load(f)
+                installed.append({
+                    "name": install_info["name"],
+                    "version": install_info.get("version", "unknown")
+                })
+            else:
+                installed.append({
+                    "name": pkg_dir.name,
+                    "version": "unknown"
+                })
+    
+    if not installed:
+        print_info("No packages installed")
+        return
+    
+    print(f"{Colors.BOLD}Installed packages:{Colors.END}")
+    for pkg in sorted(installed, key=lambda x: x["name"]):
+        print(f"  {Colors.GREEN}•{Colors.END} {pkg['name']} ({pkg['version']})")
+
+def search_packages(term: str):
+    """Search for packages"""
+    packages = load_packages()
+    
+    if not packages:
+        return
+    
+    matches = []
+    term = term.lower()
+    
+    for name, pkg in packages.items():
+        if (term in name.lower() or 
+            term in pkg.get("description", "").lower() or
+            any(term in tag.lower() for tag in pkg.get("tags", []))):
+            matches.append((name, pkg))
+    
+    if not matches:
+        print_info(f"No packages found matching '{term}'")
+        return
+    
+    print(f"{Colors.BOLD}Found {len(matches)} package(s):{Colors.END}")
+    for name, pkg in sorted(matches):
+        desc = pkg.get("description", "No description")
+        print(f"  {Colors.GREEN}•{Colors.END} {Colors.BOLD}{name}{Colors.END} - {desc}")
+
+def update_packages():
+    """Update package definitions"""
+    print("🔄 Updating package list...")
+    
+    # For now, we'll use a static URL. In production, this would be your repo's packages.json
+    packages_url = "https://raw.githubusercontent.com/yourusername/leaf/main/packages.json"
+    
+    if download_file(packages_url, PACKAGES_FILE, show_progress=False):
+        print_success("Package list updated successfully")
+    else:
+        print_error("Failed to update package list")
+
+def show_help():
+    """Show help message"""
+    print(f"""
+{Colors.BOLD}🍃 Leaf Package Manager{Colors.END}
+
+Usage: leaf <command> [arguments]
+
+Commands:
+  {Colors.GREEN}install <package>{Colors.END}    Install a package
+  {Colors.GREEN}remove <package>{Colors.END}     Remove an installed package
+  {Colors.GREEN}list{Colors.END}                 List installed packages
+  {Colors.GREEN}search <term>{Colors.END}        Search for packages
+  {Colors.GREEN}update{Colors.END}               Update package definitions
+  {Colors.GREEN}help{Colors.END}                 Show this help message
+
+Examples:
+  leaf install nvim
+  leaf search editor
+  leaf list
+  leaf remove nvim
+""")
+
+def main():
+    # Ensure directories exist
+    LEAF_DIR.mkdir(parents=True, exist_ok=True)
+    BIN_DIR.mkdir(parents=True, exist_ok=True)
+    
+    if len(sys.argv) < 2:
+        show_help()
+        return
+    
+    command = sys.argv[1].lower()
+    
+    if command == "install" and len(sys.argv) == 3:
+        install_package(sys.argv[2])
+    elif command == "remove" and len(sys.argv) == 3:
+        remove_package(sys.argv[2])
+    elif command == "list":
+        list_packages()
+    elif command == "search" and len(sys.argv) == 3:
+        search_packages(sys.argv[2])
+    elif command == "update":
+        update_packages()
+    elif command == "help":
+        show_help()
+    else:
+        print_error("Invalid command or missing arguments")
+        show_help()
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
