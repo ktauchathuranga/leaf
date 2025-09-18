@@ -1,7 +1,7 @@
 {
   "nvim": {
     "description": "Modern terminal-based text editor",
-    "url": "https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz",
+    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
     "version": "stable",
     "type": "archive",
     "executables": ["nvim-linux64/bin/nvim"],
