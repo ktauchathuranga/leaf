@@ -62,6 +62,7 @@ leaf update
 | `leaf update` | Update package definitions | `leaf update` |
 | `leaf --help` | Show help information | `leaf --help` |
 | `leaf --version` | Show version information | `leaf --version` |
+| `leaf self-update` | Update the leaf package manger | `leaf self-update` |
 
 ## Available Packages
 
