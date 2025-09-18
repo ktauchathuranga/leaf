@@ -42,5 +42,13 @@
     "type": "archive",
     "executables": ["lazygit"],
     "tags": ["git", "cli", "tool", "go"]
+  },
+    "code": {
+    "description": "Visual Studio Code, a modern code editor",
+    "url": "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64",
+    "version": "latest",
+    "type": "archive",
+    "executables": [{"path": "VSCode-linux-x64/bin/code", "name": "code"}],
+    "tags": ["editor", "ide", "development"]
   }
 }
