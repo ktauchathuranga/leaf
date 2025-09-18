@@ -1,4 +1,3 @@
-```sh
 #!/bin/bash
 # Leaf Package Manager Installation Script (Pre-compiled Binary)
 # Usage: curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
@@ -173,4 +172,3 @@ echo "To get started, restart your terminal or run:"
 echo "  source $SHELL_RC"
 echo ""
 echo "Then try: leaf install nvim"
-```
