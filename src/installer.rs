@@ -10,6 +10,34 @@ use tar::Archive;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use xz2::read::XzDecoder;
+use zip::ZipArchive;
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
+/// This is now a private helper function, not a method on Installer.
+/// This resolves the E0521 lifetime error.
+fn extract_archive_sync(archive_path: &Path, extract_to: &Path) -> Result<()> {
+    let file = std::fs::File::open(archive_path)?;
+    let filename = archive_path.file_name().unwrap().to_string_lossy();
+
+    if filename.ends_with(".tar.gz") || filename.ends_with(".tgz") {
+        let decoder = GzDecoder::new(file);
+        let mut archive = Archive::new(decoder);
+        archive.unpack(extract_to)?;
+    } else if filename.ends_with(".tar.xz") {
+        let decoder = XzDecoder::new(file);
+        let mut archive = Archive::new(decoder);
+        archive.unpack(extract_to)?;
+    } else if filename.ends_with(".zip") {
+        let mut archive = ZipArchive::new(file)?;
+        archive.extract(extract_to)?;
+    } else {
+        return Err(anyhow::anyhow!("Unsupported archive format: {}", filename));
+    }
+
+    Ok(())
+}
 
 pub struct Installer {
     client: Client,
@@ -31,22 +59,61 @@ impl Installer {
         let package_dir = config.packages_dir.join(name);
         let cache_dir = &config.cache_dir;
 
-        // Create package directory
         tokio::fs::create_dir_all(&package_dir).await?;
         tokio::fs::create_dir_all(cache_dir).await?;
 
-        // Determine filename from URL
-        let url_path = package.url.split('/').last().unwrap_or("archive");
-        let cache_file = cache_dir.join(format!("{}_{}", name, url_path));
+        let url_filename = package.url.split('/').last().unwrap_or("download");
+        let cache_file = cache_dir.join(format!("{}_{}", name, url_filename));
 
-        // Download if not cached
         if !cache_file.exists() {
             self.download_file(&package.url, &cache_file).await?;
         }
 
-        // Extract archive
-        self.extract_archive(&cache_file, &package_dir).await?;
+        let package_type = package.package_type.as_deref().unwrap_or("archive");
 
+        match package_type {
+            "archive" => {
+                println!("📦 Extracting archive...");
+                let archive_path = cache_file.clone();
+                let extract_path = package_dir.clone();
+                tokio::task::spawn_blocking(move || {
+                    extract_archive_sync(&archive_path, &extract_path)
+                })
+                .await??;
+            }
+            "binary" => {
+                println!("🚀 Installing binary...");
+
+                // FIX for E0716: Store the Vec in a variable to extend its lifetime.
+                let executables = package.get_executables();
+                let executable = executables.get(0).ok_or_else(|| {
+                    anyhow::anyhow!("Binary package '{}' has no executables listed", name)
+                })?;
+
+                let dest_path = package_dir.join(&executable.path);
+
+                if let Some(parent) = dest_path.parent() {
+                    tokio::fs::create_dir_all(parent).await?;
+                }
+
+                tokio::fs::copy(&cache_file, &dest_path).await?;
+
+                #[cfg(unix)]
+                {
+                    let mut perms = tokio::fs::metadata(&dest_path).await?.permissions();
+                    perms.set_mode(0o755);
+                    tokio::fs::set_permissions(&dest_path, perms).await?;
+                }
+            }
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unsupported package type: {}",
+                    package_type
+                ));
+            }
+        }
+
+        println!("✅ Installation complete for '{}'", name);
         Ok(())
     }
 
@@ -74,43 +141,6 @@ impl Installer {
 
         pb.finish_and_clear();
         file.sync_all().await?;
-        Ok(())
-    }
-
-    pub async fn extract_archive(&self, archive_path: &Path, extract_to: &Path) -> Result<()> {
-        let file = std::fs::File::open(archive_path)?;
-        let filename = archive_path.file_name().unwrap().to_string_lossy();
-
-        if filename.ends_with(".tar.gz") || filename.ends_with(".tgz") {
-            let decoder = GzDecoder::new(file);
-            let mut archive = Archive::new(decoder);
-            archive.unpack(extract_to)?;
-        } else if filename.ends_with(".tar.xz") {
-            let decoder = XzDecoder::new(file);
-            let mut archive = Archive::new(decoder);
-            archive.unpack(extract_to)?;
-        } else if filename.ends_with(".zip") {
-            let mut archive = zip::ZipArchive::new(file)?;
-            for i in 0..archive.len() {
-                let mut file = archive.by_index(i)?;
-                let outpath = extract_to.join(file.name());
-
-                if file.name().ends_with('/') {
-                    tokio::fs::create_dir_all(&outpath).await?;
-                } else {
-                    if let Some(p) = outpath.parent() {
-                        tokio::fs::create_dir_all(p).await?;
-                    }
-                    let mut outfile = tokio::fs::File::create(&outpath).await?;
-                    let mut buffer = Vec::new();
-                    std::io::copy(&mut file, &mut buffer)?;
-                    outfile.write_all(&buffer).await?;
-                }
-            }
-        } else {
-            return Err(anyhow::anyhow!("Unsupported archive format: {}", filename));
-        }
-
         Ok(())
     }
 }
