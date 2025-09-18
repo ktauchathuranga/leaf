@@ -164,16 +164,11 @@ We welcome contributions! Here's how you can help:
    cargo build --release
    ```
 
-3. Run tests:
-   ```bash
-   cargo test
-   ```
-
 ## Requirements
 
 - **Linux**: glibc 2.17+ (most distributions from 2012+)
 - **macOS**: macOS 10.12+ (Sierra)
-- **Architecture**: x86_64 or ARM64
+- **Architecture**: x86_64
 
 ## Troubleshooting
 
@@ -199,22 +194,6 @@ Update the package list:
 leaf update
 ```
 
-## Migration from Python Version
-
-If you're upgrading from the Python version of Leaf:
-
-1. Remove the old installation:
-   ```bash
-   rm ~/.local/bin/leaf  # Remove old Python script
-   ```
-
-2. Install the new Rust version:
-   ```bash
-   curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
-   ```
-
-3. Your existing packages and configuration will be preserved.
-
 ## Comparison
 
 | Feature | Leaf | Homebrew | Snap | AppImage |
@@ -229,21 +208,12 @@ If you're upgrading from the Python version of Leaf:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- Built with [Rust](https://rust-lang.org/) for performance and safety
-- Inspired by package managers like Homebrew and Scoop
-- Uses GitHub Actions for automated binary builds
-- Special thanks to all contributors and package maintainers
-
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/ktauchathuranga/leaf/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/ktauchathuranga/leaf/discussions)
-- **Contact**: ktauchathuranga@github.com
-
 ---
 
 <p align="center">
-  <strong>Happy package managing with Leaf!</strong>
+  <strong>Shhhh!</strong>
 </p>
