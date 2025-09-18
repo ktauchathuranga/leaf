@@ -4,7 +4,7 @@
     "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
     "version": "latest",
     "type": "archive",
-    "executables": [{"path": "bin/nvim", "name": "nvim"}],
+    "executables": [{"path": "nvim-linux64/bin/nvim", "name": "nvim"}],
     "tags": ["editor", "vim", "terminal"]
   },
   "go": {
