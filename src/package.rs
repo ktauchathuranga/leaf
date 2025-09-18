@@ -1,14 +1,20 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Package {
     pub description: String,
-    pub url: String,
     pub version: String,
+    pub tags: Option<Vec<String>>,
+    pub platforms: HashMap<String, PlatformDetails>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PlatformDetails {
+    pub url: String,
     #[serde(rename = "type")]
     pub package_type: Option<String>,
     pub executables: Option<serde_json::Value>,
-    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,7 +25,7 @@ pub struct InstallInfo {
     pub executables: Option<serde_json::Value>,
 }
 
-impl Package {
+impl PlatformDetails {
     pub fn get_executables(&self) -> Vec<ExecutableInfo> {
         match &self.executables {
             Some(serde_json::Value::String(path)) => {
@@ -53,4 +59,3 @@ pub struct ExecutableInfo {
     pub path: String,
     pub name: Option<String>,
 }
-

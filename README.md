@@ -1,42 +1,50 @@
 # 🍃 Leaf Package Manager
 
-A fast, simple, and sudo-free package manager for Linux and macOS, written in Rust.
+A fast, simple, and sudo-free package manager for Linux and Windows, written in Rust.
 
 [![Release](https://img.shields.io/github/v/release/ktauchathuranga/leaf?sort=semver)](https://github.com/ktauchathuranga/leaf/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue.svg)](https://github.com/ktauchathuranga/leaf)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-blue.svg)](https://github.com/ktauchathuranga/leaf)
 
 ## Features
 
-- **Fast & Lightweight** - Written in Rust for optimal performance
-- **No sudo required** - Install packages in your user space
-- **Simple commands** - Easy-to-use CLI interface
-- **Cross-platform** - Supports Linux (x86_64) and macOS (Intel)
-- **Smart package management** - Automatic dependency handling and symlink creation
-- **Efficient caching** - Downloads are cached for faster reinstalls
-- **Package search** - Find packages with fuzzy search
-- **Package registry** - Curated list of popular development tools
+- **Fast & Lightweight** - Written in Rust for optimal performance.
+- **No Sudo Required** - Install packages in your user space, no admin privileges needed.
+- **Simple Commands** - Easy-to-use and intuitive CLI.
+- **Cross-Platform** - Natively supports Linux and Windows.
+- **Efficient Caching** - Downloads are cached for faster reinstalls and offline use.
+- **Package Search** - Easily find the tools you need.
+- **Clean Uninstalls** - Completely removes packages without leaving behind junk.
 
 ## Quick Start
 
 ### Installation
 
-Install Leaf with a single command:
+#### Linux
+
+Install Leaf with a single command in your terminal:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
 ```
 
-After installation, restart your terminal or run:
-```bash
-source ~/.bashrc  # or ~/.zshrc
+After installation, restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`).
+
+#### Windows
+
+Install Leaf by running this command in a **PowerShell** terminal:
+
+```powershell
+irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex
 ```
+
+After installation, restart your PowerShell terminal for the `PATH` changes to take effect.
 
 ### Basic Usage
 
 ```bash
 # Install a package
-leaf install nvim
+leaf install go
 
 # List installed packages
 leaf list
@@ -45,9 +53,9 @@ leaf list
 leaf search editor
 
 # Remove a package
-leaf remove nvim
+leaf remove go
 
-# Update package list
+# Update the list of available packages
 leaf update
 ```
 
@@ -55,152 +63,92 @@ leaf update
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `leaf install <package>` | Install a package | `leaf install ripgrep` |
-| `leaf remove <package>` | Remove an installed package | `leaf remove ripgrep` |
+| `leaf install <package>` | Install a package | `leaf install nvim` |
+| `leaf remove <package>` | Remove an installed package | `leaf remove nvim` |
 | `leaf list` | List all installed packages | `leaf list` |
-| `leaf search <term>` | Search available packages | `leaf search rust` |
-| `leaf update` | Update package definitions | `leaf update` |
+| `leaf search <term>` | Search for available packages | `leaf search rust` |
+| `leaf update` | Update package definitions from the registry | `leaf update` |
+| `leaf self-update` | Update Leaf to the latest version | `leaf self-update` |
+| `leaf nuke --confirmed`| **DESTRUCTIVE**: Remove all packages and Leaf itself | `leaf nuke --confirmed` |
 | `leaf --help` | Show help information | `leaf --help` |
-| `leaf --version` | Show version information | `leaf --version` |
-| `leaf self-update` | Update the leaf package manger | `leaf self-update` |
-
-## Available Packages
-
-Leaf includes a curated selection of popular development tools and utilities:
-
-### Editors & IDEs
-- `nvim` - Neovim text editor
-- `helix` - Modern modal text editor
-- `code` - Visual Studio Code
-
-*Use `leaf search .` to see all available packages.*
 
 ## How It Works
 
-1. **User-space installation**: All packages are installed in `~/.local/leaf/packages/`
-2. **Automatic PATH management**: Executables are symlinked to `~/.local/bin/`
-3. **Smart extraction**: Supports `.tar.gz`, `.tar.xz`, and `.zip` archives
-4. **Metadata tracking**: Each installation is tracked with version and file information
-5. **Clean removal**: Removes all files and symlinks when uninstalling
+1.  **User-Space Installation**: Packages are installed into your user directory, not system-wide.
+    -   **Linux**: `~/.local/share/leaf/packages/`
+    -   **Windows**: `%LOCALAPPDATA%\leaf\packages\`
+2.  **Automatic PATH Management**: Executables are linked into a common `bin` directory that you add to your PATH once.
+3.  **Cross-Platform Awareness**: The `packages.json` registry contains different URLs and instructions for each operating system.
+4.  **Clean Removal**: `leaf remove` deletes the package directory and its executable link, keeping your system clean.
 
 ## Directory Structure
 
+**On Linux:**
 ```
-~/.local/leaf/
-├── packages/           # Installed packages
-│   └── nvim/          # Package directory
-├── cache/             # Downloaded archives
-├── config.json        # Leaf configuration
-└── packages.json      # Package definitions
-
-~/.local/bin/          # Executable symlinks (added to PATH)
+~/.local/
+├── share/leaf/
+│   ├── packages/         # Installed packages
+│   ├── cache/            # Downloaded archives
+│   ├── config.json       # Leaf configuration
+│   └── packages.json     # Package definitions
+└── bin/                  # Executable symlinks (in your PATH)
 ```
 
-## Configuration
+**On Windows:**
+```
+%LOCALAPPDATA%\
+└── leaf\
+    ├── packages/         # Installed packages
+    ├── cache/            # Downloaded archives
+    ├── config.json       # Leaf configuration
+    └── packages.json     # Package definitions
 
-Leaf stores its configuration in `~/.local/leaf/config.json`:
-
-```json
-{
-  "version": "1.0.0",
-  "install_dir": "/home/user/.local/leaf",
-  "bin_dir": "/home/user/.local/bin",
-  "packages_dir": "/home/user/.local/leaf/packages",
-  "cache_dir": "/home/user/.local/leaf/cache"
-}
+# Note: Binaries are typically placed in a directory already in the user's PATH,
+# or you will be instructed to add it.
 ```
 
 ## Contributing
 
-We welcome contributions! Here's how you can help:
+We welcome contributions! The easiest way to contribute is by adding new packages.
 
 ### Adding New Packages
 
-1. Fork this repository
-2. Edit `packages.json` to add your package:
-   ```json
-   {
-     "package-name": {
-       "description": "Package description",
-       "url": "https://github.com/user/repo/releases/download/v1.0.0/binary.tar.gz",
-       "version": "1.0.0",
-       "type": "archive",
-       "executables": "bin/executable-name",
-       "tags": ["category", "tool"]
-     }
-   }
-   ```
-3. Submit a pull request
+1.  Fork this repository.
+2.  Edit `packages.json` to add or update a package. The new format requires a `platforms` object:
+    ```json
+    "package-name": {
+      "description": "A cool tool.",
+      "version": "1.2.3",
+      "tags": ["cli", "tool"],
+      "platforms": {
+        "linux-x86_64": {
+          "url": "https://.../download/v1.2.3/linux-amd64.tar.gz",
+          "type": "archive",
+          "executables": ["bin/executable"]
+        },
+        "windows-x86_64": {
+          "url": "https://.../download/v1.2.3/windows-amd64.zip",
+          "type": "archive",
+          "executables": ["bin/executable.exe"]
+        }
+      }
+    }
+    ```
+3.  Run `cargo test` to validate the URLs in your new entry.
+4.  Submit a pull request!
 
 ### Development
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ktauchathuranga/leaf.git
-   cd leaf
-   ```
-
-2. Build from source:
-   ```bash
-   cargo build --release
-   ```
-
-3. Run tests:
-    ```bash
-    cargo test
-    ```
-    this will check each package in the `packages.json` file and validate them.
+1.  Clone the repository: `git clone https://github.com/ktauchathuranga/leaf.git`
+2.  Build from source: `cargo build --release`
+3.  Run tests: `cargo test`
 
 ## Requirements
 
-- **Linux**: glibc 2.17+ (most distributions from 2012+)
-- **macOS**: macOS 10.12+ (Sierra)
-- **Architecture**: x86_64
-
-## Troubleshooting
-
-### Command not found after installation
-
-Make sure `~/.local/bin` is in your PATH:
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Permission denied when running installed packages
-
-Some packages may need executable permissions:
-```bash
-chmod +x ~/.local/bin/package-name
-```
-
-### Package not found
-
-Update the package list:
-```bash
-leaf update
-```
-
-## Comparison
-
-| Feature | Leaf | Homebrew | Snap | AppImage |
-|---------|------|----------|------|----------|
-| Sudo required | No | No | Yes | No |
-| User-space install | Yes | Yes | No | Yes |
-| Fast execution | Yes | Yes | No | Yes |
-| Simple CLI | Yes | Yes | Yes | No |
-| Cross-platform | Yes | Yes | No | Yes |
+- **Linux**: glibc 2.18+
+- **Windows**: Windows 10+
+- **Architectures**: x86_64
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/ktauchathuranga/leaf/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/ktauchathuranga/leaf/discussions)
----
-
-<p align="center">
-  <strong>Shhhh!</strong>
-</p>
