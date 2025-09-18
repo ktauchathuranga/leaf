@@ -2,7 +2,7 @@
 
 A fast, simple, and sudo-free package manager for Linux and macOS, written in Rust.
 
-[![Release](https://github.com/ktauchathuranga/leaf/actions/workflows/release.yml/badge.svg)](https://github.com/ktauchathuranga/leaf/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/ktauchathuranga/leaf?sort=semver)](https://github.com/ktauchathuranga/leaf/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-blue.svg)](https://github.com/ktauchathuranga/leaf)
 
