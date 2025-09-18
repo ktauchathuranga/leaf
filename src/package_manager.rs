@@ -407,3 +407,66 @@ impl PackageManager {
         Ok(())
     }
 }
+
+// ==================
+// |   TEST SUITE   |
+// ==================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use tokio::fs;
+
+    /// This test reads the `packages.json` file from the project root and sends an HTTP HEAD
+    /// request to each package's URL to confirm it is reachable and not a broken link.
+    #[tokio::test]
+    async fn test_package_urls_are_valid() {
+        // Read the packages.json file from the project root
+        let content = fs::read_to_string("packages.json")
+            .await
+            .expect("Failed to read packages.json. Make sure it's in the project root.");
+
+        // Parse the JSON content
+        let packages: HashMap<String, Package> = serde_json::from_str(&content)
+            .expect("Failed to parse packages.json. Check for syntax errors.");
+
+        // Create a reqwest client with a User-Agent to avoid being blocked
+        let client = reqwest::Client::builder()
+            .user_agent("leaf-package-manager-test-suite/1.0")
+            .build()
+            .unwrap();
+
+        let mut failed_urls = Vec::new();
+
+        // Iterate through all packages and test their URLs
+        for (name, package) in packages {
+            let url = &package.url;
+            println!("- Testing URL for package '{}': {}", name, url);
+
+            // Send a HEAD request, which is lightweight and ideal for checking links
+            let response = client.head(url).send().await;
+
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        println!("  ✓ Success ({})", res.status());
+                    } else {
+                        println!("  ✗ Failure ({})", res.status());
+                        failed_urls.push(format!("'{}': {} (Status: {})", name, url, res.status()));
+                    }
+                }
+                Err(e) => {
+                    println!("  ✗ Network Error: {}", e);
+                    failed_urls.push(format!("'{}': {} (Error: {})", name, url, e));
+                }
+            }
+        }
+
+        // Assert that there were no failed URLs
+        assert!(
+            failed_urls.is_empty(),
+            "One or more package URLs are invalid:\n- {}\n",
+            failed_urls.join("\n- ")
+        );
+    }
+}

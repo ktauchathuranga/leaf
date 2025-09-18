@@ -165,6 +165,12 @@ We welcome contributions! Here's how you can help:
    cargo build --release
    ```
 
+3. Run tests:
+    ```bash
+    cargo test
+    ```
+    this will check each package in the `packages.json` file and validate them.
+
 ## Requirements
 
 - **Linux**: glibc 2.17+ (most distributions from 2012+)

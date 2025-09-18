@@ -1,7 +1,7 @@
 {
   "nvim": {
     "description": "Modern terminal-based text editor",
-    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz",
+    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
     "version": "latest",
     "type": "archive",
     "executables": ["nvim-linux64/bin/nvim"],
@@ -37,8 +37,8 @@
   },
   "lazygit": {
     "description": "A simple terminal UI for git commands, written in Go",
-    "url": "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_0.41.0_Linux_x86_64.tar.gz",
-    "version": "latest",
+    "url": "https://github.com/jesseduffield/lazygit/releases/download/v0.55.1/lazygit_0.55.1_linux_x86_64.tar.gz",
+    "version": "0.55.1",
     "type": "archive",
     "executables": ["lazygit"],
     "tags": ["git", "cli", "tool", "go"]
