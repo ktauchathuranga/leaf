@@ -11,7 +11,7 @@ A fast, simple, and sudo-free package manager for Linux and macOS, written in Ru
 - **Fast & Lightweight** - Written in Rust for optimal performance
 - **No sudo required** - Install packages in your user space
 - **Simple commands** - Easy-to-use CLI interface
-- **Cross-platform** - Supports Linux (x86_64, ARM64) and macOS (Intel, Apple Silicon)
+- **Cross-platform** - Supports Linux (x86_64) and macOS (Intel)
 - **Smart package management** - Automatic dependency handling and symlink creation
 - **Efficient caching** - Downloads are cached for faster reinstalls
 - **Package search** - Find packages with fuzzy search
@@ -72,26 +72,6 @@ Leaf includes a curated selection of popular development tools and utilities:
 - `nvim` - Neovim text editor
 - `helix` - Modern modal text editor
 - `code` - Visual Studio Code
-
-### Development Tools
-- `ripgrep` - Fast text search tool
-- `fd` - Fast alternative to find
-- `bat` - Cat with syntax highlighting
-- `exa` - Modern ls replacement
-- `jq` - JSON processor
-- `gh` - GitHub CLI
-
-### System Utilities
-- `htop` - Interactive process viewer
-- `btm` - System monitor
-- `dust` - Disk usage analyzer
-- `zoxide` - Smart cd command
-
-### Languages & Runtimes
-- `node` - Node.js runtime
-- `deno` - Deno runtime
-- `go` - Go programming language
-- `zig` - Zig programming language
 
 *Use `leaf search .` to see all available packages.*
 
