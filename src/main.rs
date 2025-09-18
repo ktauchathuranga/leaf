@@ -12,7 +12,7 @@ use std::process;
 #[tokio::main]
 async fn main() {
     let matches = Command::new("leaf")
-        .version("0.1.3")
+        .version("0.2.0")
         .author("ktauchathuranga")
         .about("🍃 A simple, sudo-free package manager")
         .subcommand_required(true)
@@ -52,7 +52,14 @@ async fn main() {
                         .action(clap::ArgAction::SetTrue),
                 ),
         )
-        .subcommand(Command::new("self-update").about("Update the leaf package manager itself"))
+        .subcommand(
+            Command::new("self-update")
+                .about("Update the leaf package manager itself (for Linux/macOS)"),
+        )
+        .subcommand(
+            Command::new("self-install-powershell")
+                .about("Prints the PowerShell command to install/update on Windows"),
+        )
         .get_matches();
 
     let mut pm = match PackageManager::new().await {
@@ -83,6 +90,12 @@ async fn main() {
             pm.nuke_everything(confirmed).await
         }
         Some(("self-update", _)) => pm.self_update().await,
+        Some(("self-install-powershell", _)) => {
+            println!(
+                "irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex"
+            );
+            Ok(())
+        }
         _ => {
             print_error("Unknown command");
             Ok(())
@@ -94,3 +107,4 @@ async fn main() {
         process::exit(1);
     }
 }
+

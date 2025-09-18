@@ -4,6 +4,17 @@
 
 set -e
 
+# --- START: Windows detection ---
+if [[ "$(uname -s)" == "CYGWIN"* || "$(uname -s)" == "MINGW"* || "$(uname -s)" == "MSYS"* ]]; then
+    echo "🍃 Leaf for Windows should be installed via PowerShell."
+    echo "Please run the following command in a PowerShell terminal:"
+    echo ""
+    echo "irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex"
+    echo ""
+    exit 0
+fi
+# --- END: Windows detection ---
+
 LEAF_DIR="$HOME/.local/leaf"
 BIN_DIR="$HOME/.local/bin"
 LEAF_VERSION="latest"

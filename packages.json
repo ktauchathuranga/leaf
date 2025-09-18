@@ -1,54 +1,112 @@
 {
   "nvim": {
     "description": "Modern terminal-based text editor",
-    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage",
     "version": "latest",
-    "type": "binary",
-    "executables": [{"path": "nvim.appimage", "name": "nvim"}], 
-    "tags": ["editor", "vim", "terminal"]
+    "tags": ["editor", "vim", "terminal"],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage",
+        "type": "binary",
+        "executables": [{"path": "nvim.appimage", "name": "nvim"}]
+      },
+      "windows-x86_64": {
+        "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-win64.zip",
+        "type": "archive",
+        "executables": [{"path": "nvim-win64/bin/nvim.exe", "name": "nvim.exe"}]
+      }
+    }
   },
   "go": {
     "description": "The Go programming language toolchain",
-    "url": "https://go.dev/dl/go1.22.5.linux-amd64.tar.gz",
     "version": "1.22.5",
-    "type": "archive",
-    "executables": ["go/bin/go"],
-    "tags": ["programming", "golang", "development"]
+    "tags": ["programming", "golang", "development"],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://go.dev/dl/go1.22.5.linux-amd64.tar.gz",
+        "type": "archive",
+        "executables": ["go/bin/go"]
+      },
+      "windows-x86_64": {
+        "url": "https://go.dev/dl/go1.22.5.windows-amd64.zip",
+        "type": "archive",
+        "executables": ["go/bin/go.exe"]
+      }
+    }
   },
   "nodejs": {
     "description": "JavaScript runtime, required for React and TypeScript",
-    "url": "https://nodejs.org/dist/v20.12.2/node-v20.12.2-linux-x64.tar.xz",
     "version": "20.12.2",
-    "type": "archive",
-    "executables": [
-      {"path": "node-v20.12.2-linux-x64/bin/node", "name": "node"},
-      {"path": "node-v20.12.2-linux-x64/bin/npm", "name": "npm"},
-      {"path": "node-v20.12.2-linux-x64/bin/npx", "name": "npx"}
-    ],
-    "tags": ["javascript", "runtime", "react", "typescript", "development"]
+    "tags": ["javascript", "runtime", "react", "typescript", "development"],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://nodejs.org/dist/v20.12.2/node-v20.12.2-linux-x64.tar.xz",
+        "type": "archive",
+        "executables": [
+          {"path": "node-v20.12.2-linux-x64/bin/node", "name": "node"},
+          {"path": "node-v20.12.2-linux-x64/bin/npm", "name": "npm"},
+          {"path": "node-v20.12.2-linux-x64/bin/npx", "name": "npx"}
+        ]
+      },
+      "windows-x86_64": {
+        "url": "https://nodejs.org/dist/v20.12.2/node-v20.12.2-win-x64.zip",
+        "type": "archive",
+        "executables": [
+          {"path": "node-v20.12.2-win-x64/node.exe", "name": "node.exe"},
+          {"path": "node-v20.12.2-win-x64/npm.cmd", "name": "npm.cmd"},
+          {"path": "node-v20.12.2-win-x64/npx.cmd", "name": "npx.cmd"}
+        ]
+      }
+    }
   },
   "tailwindcss": {
     "description": "A utility-first CSS framework for rapid UI development",
-    "url": "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64",
     "version": "latest",
-    "type": "binary",
-    "executables": [{"path": "tailwindcss-linux-x64", "name": "tailwindcss"}],
-    "tags": ["css", "frontend", "tailwind", "development"]
+    "tags": ["css", "frontend", "tailwind", "development"],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64",
+        "type": "binary",
+        "executables": [{"path": "tailwindcss-linux-x64", "name": "tailwindcss"}]
+      },
+      "windows-x86_64": {
+        "url": "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-windows-x64.exe",
+        "type": "binary",
+        "executables": [{"path": "tailwindcss-windows-x64.exe", "name": "tailwindcss.exe"}]
+      }
+    }
   },
   "lazygit": {
     "description": "A simple terminal UI for git commands, written in Go",
-    "url": "https://github.com/jesseduffield/lazygit/releases/download/v0.55.1/lazygit_0.55.1_linux_x86_64.tar.gz",
     "version": "0.55.1",
-    "type": "archive",
-    "executables": ["lazygit"],
-    "tags": ["git", "cli", "tool", "go"]
+    "tags": ["git", "cli", "tool", "go"],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://github.com/jesseduffield/lazygit/releases/download/v0.41.0/lazygit_0.41.0_Linux_x86_64.tar.gz",
+        "type": "archive",
+        "executables": ["lazygit"]
+      },
+      "windows-x86_64": {
+        "url": "https://github.com/jesseduffield/lazygit/releases/download/v0.41.0/lazygit_0.41.0_Windows_x86_64.zip",
+        "type": "archive",
+        "executables": ["lazygit.exe"]
+      }
+    }
   },
-    "code": {
+  "code": {
     "description": "Visual Studio Code, a modern code editor",
-    "url": "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64",
     "version": "latest",
-    "type": "archive",
-    "executables": [{"path": "VSCode-linux-x64/bin/code", "name": "code"}],
-    "tags": ["editor", "ide", "development"]
+    "tags": ["editor", "ide", "development"],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://code.visualstudio.com/sha/download?build=stable&os=linux-x64",
+        "type": "archive",
+        "executables": [{"path": "VSCode-linux-x64/bin/code", "name": "code"}]
+      },
+      "windows-x86_64": {
+        "url": "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-archive",
+        "type": "archive",
+        "executables": [{"path": "bin/code.cmd", "name": "code.cmd"}]
+      }
+    }
   }
 }

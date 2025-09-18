@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::package::Package;
+use crate::package::{Package, PlatformDetails};
 use anyhow::{Result, anyhow};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -51,7 +51,8 @@ impl Installer {
     pub async fn install_package(
         &self,
         name: &str,
-        package: &Package,
+        _package: &Package,
+        platform_details: &PlatformDetails,
         config: &Config,
     ) -> Result<()> {
         let package_dir = config.packages_dir.join(name);
@@ -61,9 +62,12 @@ impl Installer {
         fs::create_dir_all(cache_dir).await?;
 
         // Download the file, which now returns the actual path of the cached file
-        let cache_file_path = self.download_file(&package.url, cache_dir).await?;
+        let cache_file_path = self.download_file(&platform_details.url, cache_dir).await?;
 
-        let package_type = package.package_type.as_deref().unwrap_or("archive");
+        let package_type = platform_details
+            .package_type
+            .as_deref()
+            .unwrap_or("archive");
 
         match package_type {
             "archive" => {
@@ -76,11 +80,12 @@ impl Installer {
             }
             "binary" => {
                 println!("🚀 Installing binary...");
-                let executables = package.get_executables();
+                let executables = platform_details.get_executables();
                 let executable = executables.get(0).ok_or_else(|| {
                     anyhow!("Binary package '{}' has no executables listed", name)
                 })?;
 
+                // For a binary, the "path" is just the filename. We place it in the package dir.
                 let dest_path = package_dir.join(&executable.path);
 
                 if let Some(parent) = dest_path.parent() {
@@ -159,3 +164,4 @@ impl Installer {
         Ok(filepath)
     }
 }
+

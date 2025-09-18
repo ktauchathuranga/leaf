@@ -49,10 +49,10 @@ jobs:
             target: x86_64-unknown-linux-gnu
             binary_name: leaf
             archive_name: leaf-linux-x86_64.tar.gz
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            binary_name: leaf
-            archive_name: leaf-macos-x86_64.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_name: leaf.exe
+            archive_name: leaf-windows-x86_64.zip
 
     steps:
     - name: Checkout code
@@ -75,15 +75,22 @@ jobs:
     - name: Build
       run: cargo build --release --target ${{ matrix.target }}
 
-    - name: Create archive
+    - name: Create archive (Linux)
+      if: runner.os == 'Linux'
       run: |
-        # Create a temporary directory to package the binary
         mkdir staging
-        # Copy the binary into the staging directory
         cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} staging/
-        # Create the tarball from the contents of the staging directory
         cd staging && tar -czf ../${{ matrix.archive_name }} .
         cd ..
+        echo "✅ Archive created: ${{ matrix.archive_name }}"
+
+    - name: Create archive (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        New-Item -ItemType Directory -Name staging
+        Copy-Item -Path "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" -Destination "staging/"
+        Compress-Archive -Path "staging/*" -DestinationPath "${{ matrix.archive_name }}"
         echo "✅ Archive created: ${{ matrix.archive_name }}"
 
     - name: Upload artifact
@@ -109,19 +116,25 @@ jobs:
       with:
         tag_name: ${{ needs.parse_release_info.outputs.tag }}
         name: Release ${{ needs.parse_release_info.outputs.tag }}
-        files: ./artifacts/*/*.tar.gz
+        files: ./artifacts/**/*.* 
         body: |
           ## Leaf Package Manager ${{ needs.parse_release_info.outputs.tag }}
 
-          🍃 A simple, sudo-free package manager for Linux/macOS written in Rust.
+          🍃 A simple, sudo-free package manager for Linux and Windows, written in Rust.
 
           ### Installation
+
+          **Linux:**
           ```bash
           curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
+          ```
+
+          **Windows (PowerShell):**
+          ```powershell
+          irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex
           ```
 
           ### Changes in this release
           See merged pull requests for details.
         draft: false
         prerelease: false
-
