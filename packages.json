@@ -1,10 +1,10 @@
 {
   "nvim": {
     "description": "Modern terminal-based text editor",
-    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
+    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage",
     "version": "latest",
-    "type": "archive",
-    "executables": [{"path": "nvim-linux64/bin/nvim", "name": "nvim"}],
+    "type": "binary",
+    "executables": [{"path": "nvim.appimage", "name": "nvim"}], 
     "tags": ["editor", "vim", "terminal"]
   },
   "go": {
