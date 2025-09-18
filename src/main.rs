@@ -12,7 +12,7 @@ use std::process;
 #[tokio::main]
 async fn main() {
     let matches = Command::new("leaf")
-        .version("1.0.0")
+        .version("0.1.1")
         .author("ktauchathuranga")
         .about("🍃 A simple, sudo-free package manager")
         .subcommand_required(true)
@@ -52,6 +52,7 @@ async fn main() {
                         .action(clap::ArgAction::SetTrue),
                 ),
         )
+        .subcommand(Command::new("self-update").about("Update the leaf package manager itself"))
         .get_matches();
 
     let mut pm = match PackageManager::new().await {
@@ -81,6 +82,7 @@ async fn main() {
             let confirmed = sub_matches.get_flag("confirmed");
             pm.nuke_everything(confirmed).await
         }
+        Some(("self-update", _)) => pm.self_update().await,
         _ => {
             print_error("Unknown command");
             Ok(())

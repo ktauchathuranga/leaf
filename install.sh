@@ -13,7 +13,7 @@ echo "🍃 Installing Leaf Package Manager..."
 
 # Check if leaf is already installed and warn about nuke
 if [ -f "$BIN_DIR/leaf" ]; then
-    echo "⚠️  Leaf is already installed."
+    echo "[!] Leaf is already installed."
     echo "If you want to completely remove it first, run: leaf nuke --confirmed"
     echo "Continuing with installation/update..."
 fi
@@ -57,20 +57,20 @@ case "$OS" in
         ;;
 esac
 
-echo "📋 Detected platform: $PLATFORM"
+echo "[-] Detected platform: $PLATFORM"
 
 # Create directories
 mkdir -p "$LEAF_DIR" "$BIN_DIR"
 
 # Get the latest release download URL
 if [ "$LEAF_VERSION" = "latest" ]; then
-    echo "🔍 Finding latest release..."
+    echo "[-] Finding latest release..."
     DOWNLOAD_URL=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
         grep "browser_download_url.*leaf-$PLATFORM.tar.gz" | \
         cut -d '"' -f 4)
     
     if [ -z "$DOWNLOAD_URL" ]; then
-        echo "❌ Could not find release for platform $PLATFORM"
+        echo "[!] Could not find release for platform $PLATFORM"
         echo "Available releases:"
         curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
             grep "browser_download_url.*tar.gz" | \
@@ -82,7 +82,7 @@ else
     DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LEAF_VERSION/leaf-$PLATFORM.tar.gz"
 fi
 
-echo "📥 Downloading leaf binary..."
+echo "[-] Downloading leaf binary..."
 TEMP_DIR=$(mktemp -d)
 TEMP_FILE="$TEMP_DIR/leaf-$PLATFORM.tar.gz"
 
@@ -97,14 +97,14 @@ else
 fi
 
 # Extract and install
-echo "📦 Extracting binary..."
+echo "[-] Extracting binary..."
 cd "$TEMP_DIR"
 tar -xzf "leaf-$PLATFORM.tar.gz"
 cp leaf "$BIN_DIR/leaf"
 chmod +x "$BIN_DIR/leaf"
 
 # Download package definitions
-echo "📋 Downloading package definitions..."
+echo "[-] Downloading package definitions..."
 curl -sSL "https://raw.githubusercontent.com/$REPO/main/packages.json" -o "$LEAF_DIR/packages.json"
 
 # Add to PATH if not already there
@@ -142,10 +142,10 @@ rm -rf "$TEMP_DIR"
 if "$BIN_DIR/leaf" --version >/dev/null 2>&1; then
     VERSION_INFO=$("$BIN_DIR/leaf" --version)
     echo ""
-    echo "🎉 Leaf Package Manager installed successfully!"
-    echo "📍 Version: $VERSION_INFO"
+    echo "[-] Leaf Package Manager installed successfully!"
+    echo "[-] Version: $VERSION_INFO"
 else
-    echo "⚠️  Installation completed but leaf command test failed"
+    echo "[!]  Installation completed but leaf command test failed"
 fi
 
 echo ""

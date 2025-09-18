@@ -1,69 +1,46 @@
 {
   "nvim": {
     "description": "Modern terminal-based text editor",
-    "url": "https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz",
-    "version": "stable",
+    "url": "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
+    "version": "latest",
     "type": "archive",
     "executables": ["nvim-linux64/bin/nvim"],
     "tags": ["editor", "vim", "terminal"]
   },
-  "nodejs": {
-    "description": "JavaScript runtime built on Chrome's V8 JavaScript engine",
-    "url": "https://nodejs.org/dist/v20.8.0/node-v20.8.0-linux-x64.tar.xz",
-    "version": "20.8.0",
-    "type": "archive",
-    "executables": [
-      {"path": "node-v20.8.0-linux-x64/bin/node", "name": "node"},
-      {"path": "node-v20.8.0-linux-x64/bin/npm", "name": "npm"}
-    ],
-    "tags": ["javascript", "runtime", "development"]
-  },
   "go": {
-    "description": "The Go programming language",
-    "url": "https://go.dev/dl/go1.21.3.linux-amd64.tar.gz",
-    "version": "1.21.3",
+    "description": "The Go programming language toolchain",
+    "url": "https://go.dev/dl/go1.22.5.linux-amd64.tar.gz",
+    "version": "1.22.5",
     "type": "archive",
     "executables": ["go/bin/go"],
     "tags": ["programming", "golang", "development"]
   },
-  "fd": {
-    "description": "A simple, fast and user-friendly alternative to find",
-    "url": "https://github.com/sharkdp/fd/releases/download/v8.7.0/fd-v8.7.0-x86_64-unknown-linux-gnu.tar.gz",
-    "version": "8.7.0",
+  "nodejs": {
+    "description": "JavaScript runtime, required for React and TypeScript",
+    "url": "https://nodejs.org/dist/v20.12.2/node-v20.12.2-linux-x64.tar.xz",
+    "version": "20.12.2",
     "type": "archive",
-    "executables": ["fd-v8.7.0-x86_64-unknown-linux-gnu/fd"],
-    "tags": ["find", "search", "cli", "tool"]
+    "executables": [
+      {"path": "node-v20.12.2-linux-x64/bin/node", "name": "node"},
+      {"path": "node-v20.12.2-linux-x64/bin/npm", "name": "npm"},
+      {"path": "node-v20.12.2-linux-x64/bin/npx", "name": "npx"}
+    ],
+    "tags": ["javascript", "runtime", "react", "typescript", "development"]
   },
-  "bat": {
-    "description": "A cat clone with wings",
-    "url": "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-unknown-linux-gnu.tar.gz",
-    "version": "0.24.0",
-    "type": "archive",
-    "executables": ["bat-v0.24.0-x86_64-unknown-linux-gnu/bat"],
-    "tags": ["cat", "syntax", "highlighting", "cli"]
-  },
-  "ripgrep": {
-    "description": "A line-oriented search tool that recursively searches the current directory for a regex pattern",
-    "url": "https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz",
-    "version": "14.1.0",
-    "type": "archive",
-    "executables": ["ripgrep-14.1.0-x86_64-unknown-linux-musl/rg"],
-    "tags": ["search", "grep", "regex", "cli"]
-  },
-  "exa": {
-    "description": "A modern replacement for ls",
-    "url": "https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip",
-    "version": "0.10.1",
-    "type": "archive",
-    "executables": ["bin/exa"],
-    "tags": ["ls", "directory", "listing", "cli"]
-  },
-  "jq": {
-    "description": "Command-line JSON processor",
-    "url": "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64",
-    "version": "1.7.1",
+  "tailwindcss": {
+    "description": "A utility-first CSS framework for rapid UI development",
+    "url": "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64",
+    "version": "latest",
     "type": "binary",
-    "executables": ["jq-linux-amd64"],
-    "tags": ["json", "processor", "cli", "parser"]
+    "executables": [{"path": "tailwindcss-linux-x64", "name": "tailwindcss"}],
+    "tags": ["css", "frontend", "tailwind", "development"]
+  },
+  "lazygit": {
+    "description": "A simple terminal UI for git commands, written in Go",
+    "url": "https://github.com/jesseduffield/lazygit/releases/download/v0.55.1/lazygit_0.55.1_linux_x86_64.tar.gz",
+    "version": "0.55.1",
+    "type": "archive",
+    "executables": ["lazygit"],
+    "tags": ["git", "cli", "tool", "go"]
   }
 }

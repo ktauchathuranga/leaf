@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::installer::Installer;
 use crate::package::Package;
 use crate::utils::{print_error, print_info, print_success, print_warning};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 use tokio::fs;
@@ -270,68 +270,62 @@ impl PackageManager {
     pub async fn update_packages(&mut self) -> Result<()> {
         print_info("Updating package definitions...");
 
-        // Use the correct raw GitHub URL
         let packages_url =
             "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/packages.json";
         let packages_file = self.config.install_dir.join("packages.json");
 
-        // Use reqwest to download
         let client = reqwest::Client::builder()
             .user_agent("leaf-package-manager/1.0.0")
             .build()?;
 
         match client.get(packages_url).send().await {
             Ok(response) => {
-                if response.status().is_success() {
+                let status = response.status();
+                if status.is_success() {
                     let content = response.text().await?;
 
-                    // Verify it's valid JSON before saving
                     match serde_json::from_str::<Value>(&content) {
                         Ok(_) => {
-                            fs::write(&packages_file, content).await?;
+                            fs::write(&packages_file, &content).await?;
 
-                            // Reload packages (only if not already loading to avoid recursion)
-                            if packages_file.exists() {
-                                let content = fs::read_to_string(&packages_file).await?;
-                                let json: Value = serde_json::from_str(&content)?;
-
-                                self.packages.clear();
-                                if let Some(obj) = json.as_object() {
-                                    for (name, value) in obj {
-                                        if let Ok(package) =
-                                            serde_json::from_value::<Package>(value.clone())
-                                        {
-                                            self.packages.insert(name.clone(), package);
-                                        }
+                            // Clear and reload packages from the new file
+                            self.packages.clear();
+                            let json: Value = serde_json::from_str(&content)?;
+                            if let Some(obj) = json.as_object() {
+                                for (name, value) in obj {
+                                    if let Ok(package) =
+                                        serde_json::from_value::<Package>(value.clone())
+                                    {
+                                        self.packages.insert(name.clone(), package);
                                     }
                                 }
                             }
 
                             print_success("Package definitions updated successfully");
+                            Ok(())
                         }
-                        Err(e) => {
-                            return Err(anyhow::anyhow!(
-                                "Downloaded content is not valid JSON: {}",
-                                e
-                            ));
-                        }
+                        Err(e) => Err(anyhow::anyhow!(
+                            "Downloaded content is not valid JSON: {}",
+                            e
+                        )),
                     }
                 } else {
-                    return Err(anyhow::anyhow!(
-                        "Failed to download packages.json: HTTP {}",
-                        response.status()
-                    ));
+                    let error_body = response
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Could not read error body".to_string());
+                    Err(anyhow::anyhow!(
+                        "Failed to download packages.json: HTTP {} - {}",
+                        status,
+                        error_body
+                    ))
                 }
             }
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Network error downloading packages.json: {}",
-                    e
-                ));
-            }
+            Err(e) => Err(anyhow::anyhow!(
+                "Network error downloading packages.json: {}",
+                e
+            )),
         }
-
-        Ok(())
     }
 
     pub async fn nuke_everything(&self, confirmed: bool) -> Result<()> {
@@ -377,8 +371,102 @@ impl PackageManager {
         }
 
         print_success("🍃 Leaf and all packages have been nuked!");
-        print_info("Goodbye! Thanks for using Leaf.");
+        print_info("To complete the uninstallation, please remove the executable:");
+        print_info(&format!(
+            "  rm {}",
+            self.config.bin_dir.join("leaf").display()
+        ));
 
         Ok(())
+    }
+
+    pub async fn self_update(&self) -> Result<()> {
+        print_info("Checking for new version of Leaf...");
+
+        let install_script_url =
+            "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh";
+
+        print_info("Running the installation/update script...");
+
+        let status = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(format!("curl -sSL {} | bash", install_script_url))
+            .status()
+            .with_context(|| "Failed to start the update process.")?;
+
+        if status.success() {
+            // The script already prints success messages. We can add one more.
+            print_success("Update process completed.");
+            print_info("Please restart your terminal if you encounter any issues.");
+        } else {
+            return Err(anyhow::anyhow!(
+                "The update script failed to run. Check the output above for details."
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+// ==================
+// |   TEST SUITE   |
+// ==================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use tokio::fs;
+
+    /// This test reads the `packages.json` file from the project root and sends an HTTP HEAD
+    /// request to each package's URL to confirm it is reachable and not a broken link.
+    #[tokio::test]
+    async fn test_package_urls_are_valid() {
+        // Read the packages.json file from the project root
+        let content = fs::read_to_string("packages.json")
+            .await
+            .expect("Failed to read packages.json. Make sure it's in the project root.");
+
+        // Parse the JSON content
+        let packages: HashMap<String, Package> = serde_json::from_str(&content)
+            .expect("Failed to parse packages.json. Check for syntax errors.");
+
+        // Create a reqwest client with a User-Agent to avoid being blocked
+        let client = reqwest::Client::builder()
+            .user_agent("leaf-package-manager-test-suite/1.0")
+            .build()
+            .unwrap();
+
+        let mut failed_urls = Vec::new();
+
+        // Iterate through all packages and test their URLs
+        for (name, package) in packages {
+            let url = &package.url;
+            println!("- Testing URL for package '{}': {}", name, url);
+
+            // Send a HEAD request, which is lightweight and ideal for checking links
+            let response = client.head(url).send().await;
+
+            match response {
+                Ok(res) => {
+                    if res.status().is_success() {
+                        println!("  ✓ Success ({})", res.status());
+                    } else {
+                        println!("  ✗ Failure ({})", res.status());
+                        failed_urls.push(format!("'{}': {} (Status: {})", name, url, res.status()));
+                    }
+                }
+                Err(e) => {
+                    println!("  ✗ Network Error: {}", e);
+                    failed_urls.push(format!("'{}': {} (Error: {})", name, url, e));
+                }
+            }
+        }
+
+        // Assert that there were no failed URLs
+        assert!(
+            failed_urls.is_empty(),
+            "One or more package URLs are invalid:\n- {}\n",
+            failed_urls.join("\n- ")
+        );
     }
 }
