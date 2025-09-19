@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::installer::Installer;
 use crate::package::{Package, PlatformDetails};
 use crate::utils::{print_error, print_info, print_success, print_warning};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
@@ -43,7 +43,6 @@ impl PackageManager {
         let packages_file = self.config.install_dir.join("packages.json");
 
         if !packages_file.exists() {
-            // Use Box::pin to handle async recursion
             Box::pin(self.update_packages()).await?;
         }
 
@@ -59,7 +58,7 @@ impl PackageManager {
                 || content.trim_start().starts_with("<html")
             {
                 print_error("Downloaded packages.json appears to be HTML instead of JSON");
-                fs::remove_file(&packages_file).await.ok(); // Remove the bad file
+                fs::remove_file(&packages_file).await.ok();
                 return Ok(());
             }
 
@@ -105,10 +104,13 @@ impl PackageManager {
     fn get_platform_details<'a>(&self, package: &'a Package) -> Result<&'a PlatformDetails> {
         let platform_key = match self.platform.as_str() {
             "linux-x86_64" => "linux-x86_64",
-            "macos-x86_64" => "macos-x86_64",
-            "macos-aarch64" => "macos-aarch64",
-            "windows-x86_64" => "windows-x86_64",
-            _ => return Err(anyhow!("Unsupported platform: {}", self.platform)),
+            "linux-aarch64" => "linux-aarch64",
+            _ => {
+                return Err(anyhow!(
+                    "Unsupported platform: {}. Leaf only supports Linux.",
+                    self.platform
+                ));
+            }
         };
 
         package
@@ -128,7 +130,7 @@ impl PackageManager {
             .get(name)
             .ok_or_else(|| anyhow::anyhow!("Package '{}' not found", name))?
             .clone();
-        
+
         let platform_details = self.get_platform_details(&package)?;
 
         print_info(&format!("Installing {} for {}...", name, self.platform));
@@ -157,17 +159,8 @@ impl PackageManager {
                     fs::remove_file(&symlink_path).await?;
                 }
 
-                #[cfg(unix)]
-                {
-                    use tokio::fs::symlink;
-                    symlink(&exe_path, &symlink_path).await?;
-                }
-
-                #[cfg(windows)]
-                {
-                    // Symlinks on Windows require special permissions, so we'll just copy the file.
-                    fs::copy(&exe_path, &symlink_path).await?;
-                }
+                use tokio::fs::symlink;
+                symlink(&exe_path, &symlink_path).await?;
             }
         }
 
@@ -192,7 +185,7 @@ impl PackageManager {
 
         let package_dir = self.config.packages_dir.join(name);
 
-        // Remove symlinks/copies
+        // Remove symlinks
         if let Some(package) = self.installed.get(name) {
             if let Ok(platform_details) = self.get_platform_details(package) {
                 for executable_info in platform_details.get_executables() {
@@ -260,7 +253,10 @@ impl PackageManager {
         }
 
         if found.is_empty() {
-            print_info(&format!("No packages found matching '{}' for your platform", term));
+            print_info(&format!(
+                "No packages found matching '{}' for your platform",
+                term
+            ));
             return Ok(());
         }
 
@@ -306,7 +302,7 @@ impl PackageManager {
                         Ok(_) => {
                             fs::write(&packages_file, &content).await?;
                             self.packages.clear();
-                            self.load_packages().await?; // Reload packages
+                            self.load_packages().await?;
                             print_success("Package definitions updated successfully");
                             Ok(())
                         }
@@ -346,13 +342,12 @@ impl PackageManager {
         print_warning("NUCLEAR OPTION ACTIVATED!");
         print_warning("Removing all packages and Leaf itself...");
 
-        // Remove all symlinks/copies in bin directory
+        // Remove all symlinks in bin directory
         if self.config.bin_dir.exists() {
             let mut entries = fs::read_dir(&self.config.bin_dir).await?;
             while let Some(entry) = entries.next_entry().await? {
                 let path = entry.path();
-                
-                #[cfg(unix)]
+
                 if path.is_symlink() {
                     if let Ok(target) = fs::read_link(&path).await {
                         if target.to_string_lossy().contains("leaf/packages") {
@@ -361,22 +356,9 @@ impl PackageManager {
                         }
                     }
                 }
-
-                #[cfg(windows)]
-                {
-                    // A heuristic for Windows: if a file in our bin dir has a corresponding
-                    // package installed, we can probably remove it.
-                    if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
-                        let potential_pkg_name = file_name.trim_end_matches(".exe");
-                        if self.installed.contains_key(potential_pkg_name) {
-                             fs::remove_file(&path).await?;
-                             print_info(&format!("Removed executable: {}", path.display()));
-                        }
-                    }
-                }
             }
         }
-        
+
         // Remove the entire leaf directory
         if self.config.install_dir.exists() {
             fs::remove_dir_all(&self.config.install_dir).await?;
@@ -392,21 +374,11 @@ impl PackageManager {
             "  rm {}",
             self.config.bin_dir.join("leaf").display()
         ));
-        if cfg!(windows) {
-            print_info("You may also want to remove the ~/.leaf-bin directory from your PATH.");
-        }
-
 
         Ok(())
     }
 
     pub async fn self_update(&self) -> Result<()> {
-        if cfg!(windows) {
-            print_info("On Windows, please use the PowerShell command to update:");
-            print_info("irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex");
-            return Ok(());
-        }
-
         print_info("Checking for new version of Leaf...");
 
         let install_script_url =
@@ -433,29 +405,22 @@ impl PackageManager {
     }
 }
 
-// ==================
-// |   TEST SUITE   |
-// ==================
+// Test suite remains the same but will only test Linux packages
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashMap;
     use tokio::fs;
 
-    /// This test reads the `packages.json` file from the project root and sends an HTTP HEAD
-    /// request to each package's URL to confirm it is reachable and not a broken link.
     #[tokio::test]
     async fn test_package_urls_are_valid() {
-        // Read the packages.json file from the project root
         let content = fs::read_to_string("packages.json")
             .await
             .expect("Failed to read packages.json. Make sure it's in the project root.");
 
-        // Parse the JSON content
         let packages: HashMap<String, Package> = serde_json::from_str(&content)
             .expect("Failed to parse packages.json. Check for syntax errors.");
 
-        // Create a reqwest client with a User-Agent to avoid being blocked
         let client = reqwest::Client::builder()
             .user_agent("leaf-package-manager-test-suite/1.0")
             .build()
@@ -463,13 +428,19 @@ mod tests {
 
         let mut failed_urls = Vec::new();
 
-        // Iterate through all packages and all platforms
         for (name, package) in packages {
             for (platform, details) in package.platforms {
-                let url = &details.url;
-                println!("- Testing URL for package '{}' on '{}': {}", name, platform, url);
+                // Only test Linux platforms
+                if !platform.starts_with("linux-") {
+                    continue;
+                }
 
-                // Send a HEAD request, which is lightweight and ideal for checking links
+                let url = &details.url;
+                println!(
+                    "- Testing URL for package '{}' on '{}': {}",
+                    name, platform, url
+                );
+
                 let response = client.head(url).send().await;
 
                 match response {
@@ -478,18 +449,26 @@ mod tests {
                             println!("  ✓ Success ({})", res.status());
                         } else {
                             println!("  ✗ Failure ({})", res.status());
-                            failed_urls.push(format!("'{}' on '{}': {} (Status: {})", name, platform, url, res.status()));
+                            failed_urls.push(format!(
+                                "'{}' on '{}': {} (Status: {})",
+                                name,
+                                platform,
+                                url,
+                                res.status()
+                            ));
                         }
                     }
                     Err(e) => {
                         println!("  ✗ Network Error: {}", e);
-                        failed_urls.push(format!("'{}' on '{}': {} (Error: {})", name, platform, url, e));
+                        failed_urls.push(format!(
+                            "'{}' on '{}': {} (Error: {})",
+                            name, platform, url, e
+                        ));
                     }
                 }
             }
         }
 
-        // Assert that there were no failed URLs
         assert!(
             failed_urls.is_empty(),
             "One or more package URLs are invalid:\n- {}\n",
@@ -497,3 +476,4 @@ mod tests {
         );
     }
 }
+

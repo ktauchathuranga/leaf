@@ -1,5 +1,5 @@
 use anyhow::Result;
-use dirs::{data_local_dir, home_dir};
+use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
@@ -15,24 +15,10 @@ pub struct Config {
 
 impl Config {
     pub async fn load_or_create() -> Result<Self> {
-        let leaf_dir = data_local_dir()
-            .ok_or_else(|| anyhow::anyhow!("Cannot find local data directory"))?
-            .join("leaf");
+        let home = home_dir().ok_or_else(|| anyhow::anyhow!("Cannot find home directory"))?;
 
-        let bin_dir = if cfg!(windows) {
-            // On Windows, a common place for user-level binaries is %LOCALAPPDATA%\Microsoft\WindowsApps
-            // but to avoid permissions issues and ensure it's in PATH, we can use a subdir of leaf_dir
-            // and instruct user to add it to PATH. For simplicity, we use a '.bin' dir in home.
-            home_dir()
-                .ok_or_else(|| anyhow::anyhow!("Cannot find home directory"))?
-                .join(".leaf-bin")
-        } else {
-            home_dir()
-                .ok_or_else(|| anyhow::anyhow!("Cannot find home directory"))?
-                .join(".local")
-                .join("bin")
-        };
-
+        let leaf_dir = home.join(".local").join("leaf");
+        let bin_dir = home.join(".local").join("bin");
         let packages_dir = leaf_dir.join("packages");
         let cache_dir = leaf_dir.join("cache");
         let config_file = leaf_dir.join("config.json");
@@ -64,3 +50,4 @@ impl Config {
         Ok(config)
     }
 }
+

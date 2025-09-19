@@ -5,15 +5,12 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use xz2::read::XzDecoder;
-use zip::ZipArchive;
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 fn extract_archive_sync(archive_path: &Path, extract_to: &Path) -> Result<()> {
     let file = std::fs::File::open(archive_path)?;
@@ -27,9 +24,6 @@ fn extract_archive_sync(archive_path: &Path, extract_to: &Path) -> Result<()> {
         let decoder = XzDecoder::new(file);
         let mut archive = Archive::new(decoder);
         archive.unpack(extract_to)?;
-    } else if filename.ends_with(".zip") {
-        let mut archive = ZipArchive::new(file)?;
-        archive.extract(extract_to)?;
     } else {
         return Err(anyhow!("Unsupported archive format: {}", filename));
     }
@@ -104,7 +98,7 @@ impl Installer {
         fs::create_dir_all(&package_dir).await?;
         fs::create_dir_all(cache_dir).await?;
 
-        // Download the file, which now returns the actual path of the cached file
+        // Download the file
         let cache_file_path = self.download_file(&platform_details.url, cache_dir).await?;
 
         let package_type = platform_details
@@ -128,7 +122,6 @@ impl Installer {
                     anyhow!("Binary package '{}' has no executables listed", name)
                 })?;
 
-                // For a binary, the "path" is just the filename. We place it in the package dir.
                 let dest_path = package_dir.join(&executable.path);
 
                 if let Some(parent) = dest_path.parent() {
@@ -137,12 +130,9 @@ impl Installer {
 
                 fs::copy(&cache_file_path, &dest_path).await?;
 
-                #[cfg(unix)]
-                {
-                    let mut perms = fs::metadata(&dest_path).await?.permissions();
-                    perms.set_mode(0o755);
-                    fs::set_permissions(&dest_path, perms).await?;
-                }
+                let mut perms = fs::metadata(&dest_path).await?.permissions();
+                perms.set_mode(0o755);
+                fs::set_permissions(&dest_path, perms).await?;
             }
             _ => {
                 return Err(anyhow!("Unsupported package type: {}", package_type));
@@ -153,13 +143,10 @@ impl Installer {
         Ok(())
     }
 
-    /// Downloads a file and saves it to the cache.
-    /// Returns the final path of the downloaded file.
     pub async fn download_file(&self, url: &str, cache_dir: &Path) -> Result<PathBuf> {
         let response = self.client.get(url).send().await?;
         let total_size = response.content_length().unwrap_or(0);
 
-        // Get filename from server response with improved parsing
         let content_disposition = response
             .headers()
             .get(reqwest::header::CONTENT_DISPOSITION)
@@ -189,8 +176,8 @@ impl Installer {
         let pb = ProgressBar::new(total_size);
         pb.set_style(
             ProgressStyle::default_bar()
-                .template("  🔥 [{bar:30}] {percent}% ({bytes}/{total_bytes})")?
-                .progress_chars("█▉ "),
+                .template("  📥 [{bar:30}] {percent}% ({bytes}/{total_bytes})")?
+                .progress_chars("█▓░"),
         );
 
         let mut file = File::create(&filepath).await?;

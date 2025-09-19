@@ -12,11 +12,9 @@ permissions:
   pull-requests: read
 
 jobs:
-  # This job checks if the release should be triggered and extracts the tag
   parse_release_info:
     name: Parse Release Info from PR
     runs-on: ubuntu-latest
-    # Run only for merged PRs that contain the #release keyword
     if: github.event.pull_request.merged == true && contains(github.event.pull_request.body, '#release')
     outputs:
       should_release: ${{ steps.get_tag.outputs.should_release }}
@@ -25,7 +23,6 @@ jobs:
       - name: Get tag from PR body
         id: get_tag
         run: |
-          # Extracts 'vX.Y.Z' from a line containing '#release vX.Y.Z'
           TAG=$(echo "${{ github.event.pull_request.body }}" | grep -oP '#release\s+\K(v[0-9]+\.[0-9]+\.[0-9]+)')
           if [ -n "$TAG" ]; then
             echo "Found release tag: $TAG"
@@ -40,19 +37,17 @@ jobs:
     name: Build for ${{ matrix.target }}
     needs: parse_release_info
     if: needs.parse_release_info.outputs.should_release == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-gnu
             binary_name: leaf
             archive_name: leaf-linux-x86_64.tar.gz
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            binary_name: leaf.exe
-            archive_name: leaf-windows-x86_64.zip
+          - target: aarch64-unknown-linux-gnu
+            binary_name: leaf
+            archive_name: leaf-linux-aarch64.tar.gz
 
     steps:
     - name: Checkout code
@@ -62,6 +57,12 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
+
+    - name: Install cross-compilation tools
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
 
     - name: Cache cargo registry, index, and target
       uses: actions/cache@v4
@@ -73,24 +74,19 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build
-      run: cargo build --release --target ${{ matrix.target }}
+      run: |
+        if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+          export CC=aarch64-linux-gnu-gcc
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+        fi
+        cargo build --release --target ${{ matrix.target }}
 
-    - name: Create archive (Linux)
-      if: runner.os == 'Linux'
+    - name: Create archive
       run: |
         mkdir staging
         cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} staging/
         cd staging && tar -czf ../${{ matrix.archive_name }} .
         cd ..
-        echo "✅ Archive created: ${{ matrix.archive_name }}"
-
-    - name: Create archive (Windows)
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        New-Item -ItemType Directory -Name staging
-        Copy-Item -Path "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" -Destination "staging/"
-        Compress-Archive -Path "staging/*" -DestinationPath "${{ matrix.archive_name }}"
         echo "✅ Archive created: ${{ matrix.archive_name }}"
 
     - name: Upload artifact
@@ -120,7 +116,7 @@ jobs:
         body: |
           ## Leaf Package Manager ${{ needs.parse_release_info.outputs.tag }}
 
-          🍃 A simple, sudo-free package manager for Linux and Windows, written in Rust.
+          🍃 A simple, sudo-free package manager for Linux, written in Rust.
 
           ### Installation
 
@@ -129,10 +125,9 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
           ```
 
-          **Windows (PowerShell):**
-          ```powershell
-          irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex
-          ```
+          ### Supported Architectures
+          - x86_64 (Intel/AMD 64-bit)
+          - aarch64 (ARM 64-bit)
 
           ### Changes in this release
           See merged pull requests for details.

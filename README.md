@@ -1,17 +1,16 @@
 # 🍃 Leaf Package Manager
 
-A fast, simple, and sudo-free package manager for Linux and Windows, written in Rust.
+A fast, simple, and sudo-free package manager for Linux, written in Rust.
 
 [![Release](https://img.shields.io/github/v/release/ktauchathuranga/leaf?sort=semver)](https://github.com/ktauchathuranga/leaf/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-blue.svg)](https://github.com/ktauchathuranga/leaf)
+[![Platform](https://img.shields.io/badge/platform-Linux-blue.svg)](https://github.com/ktauchathuranga/leaf)
 
 ## Features
 
 - **Fast & Lightweight** - Written in Rust for optimal performance.
 - **No Sudo Required** - Install packages in your user space, no admin privileges needed.
 - **Simple Commands** - Easy-to-use and intuitive CLI.
-- **Cross-Platform** - Natively supports Linux and Windows.
 - **Efficient Caching** - Downloads are cached for faster reinstalls and offline use.
 - **Package Search** - Easily find the tools you need.
 - **Clean Uninstalls** - Completely removes packages without leaving behind junk.
@@ -20,8 +19,6 @@ A fast, simple, and sudo-free package manager for Linux and Windows, written in 
 
 ### Installation
 
-#### Linux
-
 Install Leaf with a single command in your terminal:
 
 ```bash
@@ -29,16 +26,6 @@ curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh
 ```
 
 After installation, restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`).
-
-#### Windows
-
-Install Leaf by running this command in a **PowerShell** terminal:
-
-```powershell
-irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex
-```
-
-After installation, restart your PowerShell terminal for the `PATH` changes to take effect.
 
 ### Basic Usage
 
@@ -74,16 +61,12 @@ leaf update
 
 ## How It Works
 
-1.  **User-Space Installation**: Packages are installed into your user directory, not system-wide.
-    -   **Linux**: `~/.local/share/leaf/packages/`
-    -   **Windows**: `%LOCALAPPDATA%\leaf\packages\`
+1.  **User-Space Installation**: Packages are installed into your user directory (`~/.local/share/leaf/packages/`), not system-wide.
 2.  **Automatic PATH Management**: Executables are linked into a common `bin` directory that you add to your PATH once.
-3.  **Cross-Platform Awareness**: The `packages.json` registry contains different URLs and instructions for each operating system.
-4.  **Clean Removal**: `leaf remove` deletes the package directory and its executable link, keeping your system clean.
+3.  **Clean Removal**: `leaf remove` deletes the package directory and its executable link, keeping your system clean.
 
 ## Directory Structure
 
-**On Linux:**
 ```
 ~/.local/
 ├── share/leaf/
@@ -94,19 +77,6 @@ leaf update
 └── bin/                  # Executable symlinks (in your PATH)
 ```
 
-**On Windows:**
-```
-%LOCALAPPDATA%\
-└── leaf\
-    ├── packages/         # Installed packages
-    ├── cache/            # Downloaded archives
-    ├── config.json       # Leaf configuration
-    └── packages.json     # Package definitions
-
-# Note: Binaries are typically placed in a directory already in the user's PATH,
-# or you will be instructed to add it.
-```
-
 ## Contributing
 
 We welcome contributions! The easiest way to contribute is by adding new packages.
@@ -114,7 +84,7 @@ We welcome contributions! The easiest way to contribute is by adding new package
 ### Adding New Packages
 
 1.  Fork this repository.
-2.  Edit `packages.json` to add or update a package. The new format requires a `platforms` object:
+2.  Edit `packages.json` to add or update a package. The format requires a `platforms` object with an `executables` array:
     ```json
     "package-name": {
       "description": "A cool tool.",
@@ -124,12 +94,12 @@ We welcome contributions! The easiest way to contribute is by adding new package
         "linux-x86_64": {
           "url": "https://.../download/v1.2.3/linux-amd64.tar.gz",
           "type": "archive",
-          "executables": ["bin/executable"]
-        },
-        "windows-x86_64": {
-          "url": "https://.../download/v1.2.3/windows-amd64.zip",
-          "type": "archive",
-          "executables": ["bin/executable.exe"]
+          "executables": [
+            {
+              "path": "path/inside/archive/to/executable",
+              "name": "desired-command-name"
+            }
+          ]
         }
       }
     }
@@ -146,7 +116,6 @@ We welcome contributions! The easiest way to contribute is by adding new package
 ## Requirements
 
 - **Linux**: glibc 2.18+
-- **Windows**: Windows 10+
 - **Architectures**: x86_64
 
 ## License
