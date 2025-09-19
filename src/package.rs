@@ -17,13 +17,13 @@ pub struct PlatformDetails {
     pub executables: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct InstallInfo {
-    pub name: String,
-    pub version: String,
-    pub installed_files: Vec<String>,
-    pub executables: Option<serde_json::Value>,
-}
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct InstallInfo {
+//     pub name: String,
+//     pub version: String,
+//     pub installed_files: Vec<String>,
+//     pub executables: Option<serde_json::Value>,
+// }
 
 impl PlatformDetails {
     pub fn get_executables(&self) -> Vec<ExecutableInfo> {

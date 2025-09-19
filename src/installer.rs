@@ -31,6 +31,49 @@ fn extract_archive_sync(archive_path: &Path, extract_to: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Parse filename from Content-Disposition header, handling both regular and RFC 5987 encoded formats
+fn parse_content_disposition_filename(content_disposition: &str) -> Option<String> {
+    // Handle RFC 5987 encoded filenames: filename*=UTF-8''example.zip
+    if let Some(encoded_part) = content_disposition.split("filename*=").nth(1) {
+        if let Some(filename_part) = encoded_part.split("''").nth(1) {
+            // Simple URL decoding for basic cases (just remove %XX sequences)
+            let decoded = filename_part.replace("%20", " ");
+            return Some(decoded);
+        }
+    }
+    
+    // Handle regular filenames: filename="example.zip" or filename=example.zip
+    if let Some(regular_part) = content_disposition.split("filename=").nth(1) {
+        let filename = regular_part.split(';').next().unwrap_or(regular_part);
+        return Some(filename.trim_matches('"').to_string());
+    }
+    
+    None
+}
+
+/// Sanitize filename for the current platform
+fn sanitize_filename(filename: &str) -> String {
+    let mut sanitized = filename.to_string();
+    
+    // Remove or replace invalid characters for Windows
+    if cfg!(windows) {
+        // Windows invalid characters: < > : " | ? * \ /
+        sanitized = sanitized.chars().map(|c| {
+            match c {
+                '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\\' | '/' => '_',
+                _ => c,
+            }
+        }).collect();
+    }
+    
+    // Ensure we have a reasonable fallback filename
+    if sanitized.is_empty() {
+        sanitized = "download".to_string();
+    }
+    
+    sanitized
+}
+
 pub struct Installer {
     client: Client,
 }
@@ -110,23 +153,26 @@ impl Installer {
             .and_then(|value| value.to_str().ok());
 
         let filename = if let Some(cd) = content_disposition {
-            cd.split("filename=")
-                .last()
-                .map(|f| f.trim_matches('"'))
-                .unwrap_or("download")
+            parse_content_disposition_filename(cd)
+                .unwrap_or_else(|| {
+                    // Fallback to URL-based filename
+                    url.split('/').last().unwrap_or("download").to_string()
+                })
         } else {
-            url.split('/').last().unwrap_or("download")
+            url.split('/').last().unwrap_or("download").to_string()
         };
 
-        let filepath = cache_dir.join(filename);
+        // Sanitize the filename for the current platform
+        let safe_filename = sanitize_filename(&filename);
+        let filepath = cache_dir.join(&safe_filename);
 
         // If file already exists in cache, skip download
         if filepath.exists() {
-            println!("Found {} in cache", filename);
+            println!("Found {} in cache", safe_filename);
             return Ok(filepath);
         }
 
-        println!("Downloading {}", filename);
+        println!("Downloading {}", safe_filename);
         let pb = ProgressBar::new(total_size);
         pb.set_style(
             ProgressStyle::default_bar()
