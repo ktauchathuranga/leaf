@@ -1,26 +1,22 @@
 #!/bin/bash
-# Leaf Package Manager Installation Script (Pre-compiled Binary)
+# Leaf Package Manager Installation Script (Linux only)
 # Usage: curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
 
 set -e
 
-# --- START: Windows detection ---
-if [[ "$(uname -s)" == "CYGWIN"* || "$(uname -s)" == "MINGW"* || "$(uname -s)" == "MSYS"* ]]; then
-    echo "🍃 Leaf for Windows should be installed via PowerShell."
-    echo "Please run the following command in a PowerShell terminal:"
-    echo ""
-    echo "irm https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.ps1 | iex"
-    echo ""
-    exit 0
+# Check if running on Linux
+if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "❌ Leaf package manager only supports Linux."
+    echo "Your OS: $(uname -s)"
+    exit 1
 fi
-# --- END: Windows detection ---
 
 LEAF_DIR="$HOME/.local/leaf"
 BIN_DIR="$HOME/.local/bin"
 LEAF_VERSION="latest"
 REPO="ktauchathuranga/leaf"
 
-echo "🍃 Installing Leaf Package Manager..."
+echo "🍃 Installing Leaf Package Manager for Linux..."
 
 # Check if leaf is already installed and warn about nuke
 if [ -f "$BIN_DIR/leaf" ]; then
@@ -29,41 +25,19 @@ if [ -f "$BIN_DIR/leaf" ]; then
     echo "Continuing with installation/update..."
 fi
 
-# Detect platform
-OS="$(uname -s)"
+# Detect architecture
 ARCH="$(uname -m)"
 
-case "$OS" in
-    Linux*)
-        case "$ARCH" in
-            x86_64)
-                PLATFORM="linux-x86_64"
-                ;;
-            aarch64|arm64)
-                PLATFORM="linux-aarch64"
-                ;;
-            *)
-                echo "❌ Unsupported architecture: $ARCH"
-                exit 1
-                ;;
-        esac
+case "$ARCH" in
+    x86_64)
+        PLATFORM="linux-x86_64"
         ;;
-    Darwin*)
-        case "$ARCH" in
-            x86_64)
-                PLATFORM="macos-x86_64"
-                ;;
-            arm64)
-                PLATFORM="macos-aarch64"
-                ;;
-            *)
-                echo "❌ Unsupported architecture: $ARCH"
-                exit 1
-                ;;
-        esac
+    aarch64|arm64)
+        PLATFORM="linux-aarch64"
         ;;
     *)
-        echo "❌ Unsupported operating system: $OS"
+        echo "❌ Unsupported architecture: $ARCH"
+        echo "Leaf only supports x86_64 and aarch64 on Linux."
         exit 1
         ;;
 esac
@@ -156,7 +130,7 @@ if "$BIN_DIR/leaf" --version >/dev/null 2>&1; then
     echo "[-] Leaf Package Manager installed successfully!"
     echo "[-] Version: $VERSION_INFO"
 else
-    echo "[!]  Installation completed but leaf command test failed"
+    echo "[!] Installation completed but leaf command test failed"
 fi
 
 echo ""
