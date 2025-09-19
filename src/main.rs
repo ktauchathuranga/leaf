@@ -12,7 +12,7 @@ use std::process;
 #[tokio::main]
 async fn main() {
     let matches = Command::new("leaf")
-        .version("0.2.0")
+        .version("0.2.2")
         .author("ktauchathuranga")
         .about("🍃 A simple, sudo-free package manager")
         .subcommand_required(true)

@@ -105,7 +105,7 @@
       "windows-x86_64": {
         "url": "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-archive",
         "type": "archive",
-        "executables": [{"path": "bin/code.cmd", "name": "code.cmd"}]
+        "executables": [{"path": "Code.exe", "name": "code.exe"}]
       }
     }
   }
