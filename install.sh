@@ -13,16 +13,23 @@ fi
 
 LEAF_DIR="$HOME/.local/leaf"
 BIN_DIR="$HOME/.local/bin"
-LEAF_VERSION="latest"
 REPO="ktauchathuranga/leaf"
 
 echo "🍃 Installing Leaf Package Manager for Linux..."
 
-# Check if leaf is already installed and warn about nuke
+# Clean up old binary from previous updates
+if [ -f "$BIN_DIR/leaf.old" ]; then
+    rm -f "$BIN_DIR/leaf.old"
+fi
+
+# Check if leaf is already installed and get its version
 if [ -f "$BIN_DIR/leaf" ]; then
-    echo "[!] Leaf is already installed."
+    CURRENT_VERSION=$("$BIN_DIR/leaf" --version | awk '{print $NF}')
+    echo "[!] Leaf is already installed (version $CURRENT_VERSION)."
     echo "If you want to completely remove it first, run: leaf nuke --confirmed"
     echo "Continuing with installation/update..."
+else
+    CURRENT_VERSION=""
 fi
 
 # Detect architecture
@@ -47,26 +54,30 @@ echo "[-] Detected platform: $PLATFORM"
 # Create directories
 mkdir -p "$LEAF_DIR" "$BIN_DIR"
 
-# Get the latest release download URL
-if [ "$LEAF_VERSION" = "latest" ]; then
-    echo "[-] Finding latest release..."
-    DOWNLOAD_URL=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
-        grep "browser_download_url.*leaf-$PLATFORM.tar.gz" | \
-        cut -d '"' -f 4)
-    
-    if [ -z "$DOWNLOAD_URL" ]; then
-        echo "[!] Could not find release for platform $PLATFORM"
-        echo "Available releases:"
-        curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
-            grep "browser_download_url.*tar.gz" | \
-            cut -d '"' -f 4 | \
-            sed 's/.*leaf-\(.*\)\.tar\.gz/  - \1/'
-        exit 1
-    fi
-else
-    DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LEAF_VERSION/leaf-$PLATFORM.tar.gz"
+# Get the latest release info
+echo "[-] Finding latest release..."
+RELEASE_INFO=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
+DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep "browser_download_url.*leaf-$PLATFORM.tar.gz" | cut -d '"' -f 4)
+LATEST_VERSION_TAG=$(echo "$RELEASE_INFO" | grep '"tag_name":' | cut -d '"' -f 4)
+LATEST_VERSION=${LATEST_VERSION_TAG#v} # Strip 'v' prefix
+
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "[!] Could not find release for platform $PLATFORM"
+    echo "Available releases:"
+    curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
+        grep "browser_download_url.*tar.gz" | \
+        cut -d '"' -f 4 | \
+        sed 's/.*leaf-\(.*\)\.tar\.gz/  - \1/'
+    exit 1
 fi
 
+# Compare versions
+if [ "$CURRENT_VERSION" == "$LATEST_VERSION" ]; then
+    echo "✅ You are already on the latest version of Leaf ($LATEST_VERSION)."
+    exit 0
+fi
+
+echo "[-] Latest version is $LATEST_VERSION. Current version is $CURRENT_VERSION."
 echo "[-] Downloading leaf binary..."
 TEMP_DIR=$(mktemp -d)
 TEMP_FILE="$TEMP_DIR/leaf-$PLATFORM.tar.gz"
@@ -85,8 +96,20 @@ fi
 echo "[-] Extracting binary..."
 cd "$TEMP_DIR"
 tar -xzf "leaf-$PLATFORM.tar.gz"
-cp leaf "$BIN_DIR/leaf"
-chmod +x "$BIN_DIR/leaf"
+
+NEW_LEAF_BIN="$TEMP_DIR/leaf"
+CURRENT_LEAF_BIN="$BIN_DIR/leaf"
+OLD_LEAF_BIN="$BIN_DIR/leaf.old"
+
+if [ -f "$CURRENT_LEAF_BIN" ]; then
+    echo "[-] Replacing current binary..."
+    # Rename current binary. Allowed even if it's running.
+    mv "$CURRENT_LEAF_BIN" "$OLD_LEAF_BIN"
+fi
+
+# Move new binary into place
+mv "$NEW_LEAF_BIN" "$CURRENT_LEAF_BIN"
+chmod +x "$CURRENT_LEAF_BIN"
 
 # Download package definitions
 echo "[-] Downloading package definitions..."
@@ -107,10 +130,10 @@ if [ -f "$SHELL_RC" ] && ! grep -q "$BIN_DIR" "$SHELL_RC"; then
     echo "✅ Added $BIN_DIR to PATH in $SHELL_RC"
 fi
 
-# Create leaf config
+# Create/update leaf config
 cat > "$LEAF_DIR/config.json" << EOF
 {
-    "version": "$LEAF_VERSION",
+    "version": "$LATEST_VERSION",
     "install_dir": "$LEAF_DIR",
     "bin_dir": "$BIN_DIR",
     "packages_dir": "$LEAF_DIR/packages",
@@ -127,10 +150,10 @@ rm -rf "$TEMP_DIR"
 if "$BIN_DIR/leaf" --version >/dev/null 2>&1; then
     VERSION_INFO=$("$BIN_DIR/leaf" --version)
     echo ""
-    echo "[-] Leaf Package Manager installed successfully!"
+    echo "[-] Leaf Package Manager updated successfully!"
     echo "[-] Version: $VERSION_INFO"
 else
-    echo "[!] Installation completed but leaf command test failed"
+    echo "[!] Update completed but leaf command test failed"
 fi
 
 echo ""
