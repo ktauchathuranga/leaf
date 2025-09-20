@@ -12,7 +12,7 @@ use std::process;
 #[tokio::main]
 async fn main() {
     let matches = Command::new("leaf")
-        .version("1.0.0")
+        .version(env!("CARGO_PKG_VERSION")) // Use version from Cargo.toml
         .author("ktauchathuranga")
         .about("🍃 A simple, sudo-free package manager for Linux")
         .subcommand_required(true)

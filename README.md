@@ -10,9 +10,9 @@ A fast, simple, and sudo-free package manager for Linux, written in Rust.
 
 - **Fast & Lightweight** - Written in Rust for optimal performance.
 - **No Sudo Required** - Install packages in your user space, no admin privileges needed.
+- **Multi-Architecture** - Supports both `x86_64` and `aarch64` (ARM64) Linux systems.
 - **Simple Commands** - Easy-to-use and intuitive CLI.
 - **Efficient Caching** - Downloads are cached for faster reinstalls and offline use.
-- **Package Search** - Easily find the tools you need.
 - **Clean Uninstalls** - Completely removes packages without leaving behind junk.
 
 ## Quick Start
@@ -61,7 +61,7 @@ leaf update
 
 ## How It Works
 
-1.  **User-Space Installation**: Packages are installed into your user directory (`~/.local/share/leaf/packages/`), not system-wide.
+1.  **User-Space Installation**: Packages are installed into your user directory (`~/.local/leaf/packages/`), not system-wide.
 2.  **Automatic PATH Management**: Executables are linked into a common `bin` directory that you add to your PATH once.
 3.  **Clean Removal**: `leaf remove` deletes the package directory and its executable link, keeping your system clean.
 
@@ -69,12 +69,12 @@ leaf update
 
 ```
 ~/.local/
-├── share/leaf/
-│   ├── packages/         # Installed packages
-│   ├── cache/            # Downloaded archives
-│   ├── config.json       # Leaf configuration
-│   └── packages.json     # Package definitions
-└── bin/                  # Executable symlinks (in your PATH)
+├── bin/                  # Executable symlinks (in your PATH)
+└── leaf/
+    ├── packages/         # Installed packages
+    ├── cache/            # Downloaded archives
+    ├── config.json       # Leaf configuration
+    └── packages.json     # Package definitions
 ```
 
 ## Contributing
@@ -84,7 +84,7 @@ We welcome contributions! The easiest way to contribute is by adding new package
 ### Adding New Packages
 
 1.  Fork this repository.
-2.  Edit `packages.json` to add or update a package. The format requires a `platforms` object with an `executables` array:
+2.  Edit `packages.json` to add or update a package. The format requires a `platforms` object with entries for each supported architecture.
     ```json
     "package-name": {
       "description": "A cool tool.",
@@ -92,7 +92,17 @@ We welcome contributions! The easiest way to contribute is by adding new package
       "tags": ["cli", "tool"],
       "platforms": {
         "linux-x86_64": {
-          "url": "https://.../download/v1.2.3/linux-amd64.tar.gz",
+          "url": "https://.../download/v1.2.3/linux-x86_64.tar.gz",
+          "type": "archive",
+          "executables": [
+            {
+              "path": "path/inside/archive/to/executable",
+              "name": "desired-command-name"
+            }
+          ]
+        },
+        "linux-aarch64": {
+          "url": "https://.../download/v1.2.3/linux-arm64.tar.gz",
           "type": "archive",
           "executables": [
             {
@@ -116,7 +126,7 @@ We welcome contributions! The easiest way to contribute is by adding new package
 ## Requirements
 
 - **Linux**: glibc 2.18+
-- **Architectures**: x86_64
+- **Architectures**: `x86_64` (Intel/AMD 64-bit), `aarch64` (ARM 64-bit)
 
 ## License
 
