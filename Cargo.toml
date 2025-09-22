@@ -1,7 +1,8 @@
 [package]
 name = "leaf"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
+build = "build.rs"
 
 [[bin]]
 name = "leaf"
@@ -21,3 +22,18 @@ xz2 = "0.1"
 dirs = "5.0"
 futures-util = "0.3"
 reqwest = { version = "0.11", features = ["stream", "rustls-tls"], default-features = false }
+
+# Profile for optimized static builds
+[profile.release]
+lto = true              # Link Time Optimization
+codegen-units = 1       # Better optimization
+panic = "abort"         # Smaller binaries
+strip = true           # Remove debug symbols
+opt-level = 3          # Maximum optimization
+
+# Static linking configuration for musl targets
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
