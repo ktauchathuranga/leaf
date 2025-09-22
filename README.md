@@ -21,8 +21,15 @@ A fast, simple, and sudo-free package manager for Linux, written in Rust.
 
 Install Leaf with a single command in your terminal:
 
+use `curl` -
 ```bash
 curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
+```
+
+or use `wget` -
+
+```bash
+wget -qO- https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
 ```
 
 After installation, restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`).
