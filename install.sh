@@ -1,6 +1,7 @@
 #!/bin/bash
 # Leaf Package Manager Installation Script (Linux only)
 # Usage: curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
+# Usafe: wget -qO- https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
 
 set -e
 
@@ -56,7 +57,17 @@ mkdir -p "$LEAF_DIR" "$BIN_DIR"
 
 # Get the latest release info
 echo "[-] Finding latest release..."
-RELEASE_INFO=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
+
+# Use wget if curl is not available
+if command -v curl >/dev/null 2>&1; then
+    RELEASE_INFO=$(curl -s "https://api.github.com/repos/$REPO/releases/latest")
+elif command -v wget >/dev/null 2>&1; then
+    RELEASE_INFO=$(wget -qO- "https://api.github.com/repos/$REPO/releases/latest")
+else
+    echo "❌ Neither curl nor wget found. Please install one of them."
+    exit 1
+fi
+
 DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep "browser_download_url.*leaf-$PLATFORM.tar.gz" | cut -d '"' -f 4)
 LATEST_VERSION_TAG=$(echo "$RELEASE_INFO" | grep '"tag_name":' | cut -d '"' -f 4)
 LATEST_VERSION=${LATEST_VERSION_TAG#v} # Strip 'v' prefix
@@ -64,10 +75,17 @@ LATEST_VERSION=${LATEST_VERSION_TAG#v} # Strip 'v' prefix
 if [ -z "$DOWNLOAD_URL" ]; then
     echo "[!] Could not find release for platform $PLATFORM"
     echo "Available releases:"
-    curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
-        grep "browser_download_url.*tar.gz" | \
-        cut -d '"' -f 4 | \
-        sed 's/.*leaf-\(.*\)\.tar\.gz/  - \1/'
+    if command -v curl >/dev/null 2>&1; then
+        curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
+            grep "browser_download_url.*tar.gz" | \
+            cut -d '"' -f 4 | \
+            sed 's/.*leaf-\(.*\)\.tar\.gz/  - \1/'
+    else
+        wget -qO- "https://api.github.com/repos/$REPO/releases/latest" | \
+            grep "browser_download_url.*tar.gz" | \
+            cut -d '"' -f 4 | \
+            sed 's/.*leaf-\(.*\)\.tar\.gz/  - \1/'
+    fi
     exit 1
 fi
 
@@ -113,7 +131,11 @@ chmod +x "$CURRENT_LEAF_BIN"
 
 # Download package definitions
 echo "[-] Downloading package definitions..."
-curl -sSL "https://raw.githubusercontent.com/$REPO/main/packages.json" -o "$LEAF_DIR/packages.json"
+if command -v curl >/dev/null 2>&1; then
+    curl -sSL "https://raw.githubusercontent.com/$REPO/main/packages.json" -o "$LEAF_DIR/packages.json"
+elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$LEAF_DIR/packages.json" "https://raw.githubusercontent.com/$REPO/main/packages.json"
+fi
 
 # Add to PATH if not already there
 SHELL_RC=""
