@@ -72,65 +72,65 @@ jobs:
             archive_name: leaf-linux-aarch64.tar.gz
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Rust with musl targets
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
+      - name: Install Rust with musl targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
-    - name: Install musl tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y musl-tools musl-dev
-        
-        # For aarch64 cross-compilation
-        if [ "${{ matrix.target }}" = "aarch64-unknown-linux-musl" ]; then
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-        fi
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev
+          
+          # For aarch64 cross-compilation
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-musl" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
 
-    - name: Cache cargo registry, index, and target
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo registry, index, and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Build static binary
-      env:
-        CC_aarch64_unknown_linux_musl: aarch64-linux-gnu-gcc
-        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
-      run: |
-        cargo build --release --target ${{ matrix.target }}
-        
-        # Verify it's statically linked
-        echo "Checking binary dependencies:"
-        if command -v ldd >/dev/null; then
-          ldd target/${{ matrix.target }}/release/${{ matrix.binary_name }} || echo "Static binary confirmed (no dynamic dependencies)"
-        fi
-        
-        # Show binary size
-        echo "Binary size:"
-        ls -lh target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+      - name: Build static binary
+        env:
+          CC_aarch64_unknown_linux_musl: aarch64-linux-gnu-gcc
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: aarch64-linux-gnu-gcc
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+          
+          # Verify it's statically linked
+          echo "Checking binary dependencies:"
+          if command -v ldd >/dev/null; then
+            ldd target/${{ matrix.target }}/release/${{ matrix.binary_name }} || echo "Static binary confirmed (no dynamic dependencies)"
+          fi
+          
+          # Show binary size
+          echo "Binary size:"
+          ls -lh target/${{ matrix.target }}/release/${{ matrix.binary_name }}
 
-    - name: Create archive
-      run: |
-        mkdir staging
-        cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} staging/
-        cd staging && tar -czf ../${{ matrix.archive_name }} .
-        cd ..
-        echo "Archive created: ${{ matrix.archive_name }}"
-        echo "Archive size: $(du -h ${{ matrix.archive_name }} | cut -f1)"
+      - name: Create archive
+        run: |
+          mkdir staging
+          cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} staging/
+          cd staging && tar -czf ../${{ matrix.archive_name }} .
+          cd ..
+          echo "Archive created: ${{ matrix.archive_name }}"
+          echo "Archive size: $(du -h ${{ matrix.archive_name }} | cut -f1)"
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.archive_name }}
-        path: ${{ matrix.archive_name }}
-        retention-days: 1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: ${{ matrix.archive_name }}
+          retention-days: 1
 
   release:
     name: Create GitHub Release
@@ -138,84 +138,94 @@ jobs:
     if: needs.parse_release_info.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
-    - name: Download all build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: ./artifacts
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
 
-    - name: Generate release body
-      id: release_body
-      run: |
-        TAG="${{ needs.parse_release_info.outputs.tag }}"
-        RELEASE_TYPE="${{ needs.parse_release_info.outputs.release_type }}"
-        IS_PRERELEASE="${{ needs.parse_release_info.outputs.is_prerelease }}"
-        
-        # Create appropriate release body based on release type
-        if [ "$IS_PRERELEASE" = "true" ]; then
-          case "$RELEASE_TYPE" in
-            "alpha")
-              RELEASE_TITLE="Alpha Release"
-              WARNING="⚠️ **This is an alpha release** - Expect bugs and breaking changes. Not recommended for production use."
-              ;;
-            "beta")
-              RELEASE_TITLE="Beta Release"
-              WARNING="⚠️ **This is a beta release** - Feature complete but may contain bugs. Use with caution in production."
-              ;;
-            "rc")
-              RELEASE_TITLE="Release Candidate"
-              WARNING="🚧 **This is a release candidate** - Stable but awaiting final testing. Suitable for testing environments."
-              ;;
-          esac
-        else
-          RELEASE_TITLE="Stable Release"
-          WARNING=""
-        fi
-        
-        # Build the release body
-        BODY="## Leaf Package Manager $TAG
+      - name: Generate release body
+        id: release_body
+        run: |
+          TAG="${{ needs.parse_release_info.outputs.tag }}"
+          RELEASE_TYPE="${{ needs.parse_release_info.outputs.release_type }}"
+          IS_PRERELEASE="${{ needs.parse_release_info.outputs.is_prerelease }}"
+          
+          # Create appropriate release body based on release type
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            case "$RELEASE_TYPE" in
+              "alpha")
+                RELEASE_TITLE="Alpha Release"
+                WARNING="⚠️ **This is an alpha release** - Expect bugs and breaking changes. Not recommended for production use."
+                ;;
+              "beta")
+                RELEASE_TITLE="Beta Release"
+                WARNING="⚠️ **This is a beta release** - Feature complete but may contain bugs. Use with caution in production."
+                ;;
+              "rc")
+                RELEASE_TITLE="Release Candidate"
+                WARNING="🚧 **This is a release candidate** - Stable but awaiting final testing. Suitable for testing environments."
+                ;;
+            esac
+          else
+            RELEASE_TITLE="Stable Release"
+            WARNING=""
+          fi
+          
+          # Build the release body
+          cat << 'EOF' > release_body.md
+          ## Leaf Package Manager $TAG
 
-$WARNING
+          $WARNING
 
-A simple, sudo-free package manager for Linux, written in Rust.
+          A simple, sudo-free package manager for Linux, written in Rust.
 
-**These are statically linked binaries with no system dependencies.**
+          **These are statically linked binaries with no system dependencies.**
 
-### Installation
+          ### Installation
 
-**Linux (any distribution):**
-\`\`\`bash
-curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
-\`\`\`
+          **Linux (any distribution):**
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/$TAG/install.sh | bash -s -- --version $TAG
+          ```
 
-Or with wget:
-\`\`\`bash
-wget -qO- https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
-\`\`\`
+          Or with wget:
+          ```bash
+          wget -qO- https://raw.githubusercontent.com/ktauchathuranga/leaf/$TAG/install.sh | bash -s -- --version $TAG
+          ```
 
-### Supported Architectures
-- x86_64 (Intel/AMD 64-bit) - Static binary
-- aarch64 (ARM 64-bit) - Static binary
+          Or to install the latest prerelease:
+          ```bash
+          curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash -s -- --prerelease
+          ```
 
-### Features
-- No system dependencies required
-- Works on any Linux distribution
-- Minimal container compatible (even scratch/distroless)
+          ### Supported Architectures
+          - x86_64 (Intel/AMD 64-bit) - Static binary
+          - aarch64 (ARM 64-bit) - Static binary
 
-### Changes in this release
-See merged pull requests for details."
+          ### Features
+          - No system dependencies required
+          - Works on any Linux distribution
+          - Minimal container compatible (even scratch/distroless)
+          - Version-specific installation with --version
+          - Support for prerelease versions with --prerelease
 
-        # Save to file (GitHub Actions has issues with multiline strings in outputs)
-        echo "$BODY" > release_body.md
-        
-        echo "release_title=$RELEASE_TITLE" >> $GITHUB_OUTPUT
+          ### Changes in this release
+          See merged pull requests for details.
+          EOF
+          
+          # Substitute variables in release body
+          sed -i "s/\$TAG/$TAG/g" release_body.md
+          sed -i "s/\$WARNING/$WARNING/g" release_body.md
+          
+          echo "release_title=$RELEASE_TITLE" >> $GITHUB_OUTPUT
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ needs.parse_release_info.outputs.tag }}
-        name: ${{ steps.release_body.outputs.release_title }} ${{ needs.parse_release_info.outputs.tag }}
-        files: ./artifacts/**/*.*
-        body_path: release_body.md
-        draft: false
-        prerelease: ${{ needs.parse_release_info.outputs.is_prerelease == 'true' }}
-        make_latest: ${{ needs.parse_release_info.outputs.is_prerelease == 'false' }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.parse_release_info.outputs.tag }}
+          name: ${{ steps.release_body.outputs.release_title }} ${{ needs.parse_release_info.outputs.tag }}
+          body_path: release_body.md
+          files: ./artifacts/*/*.tar.gz
+          draft: false
+          prerelease: ${{ needs.parse_release_info.outputs.is_prerelease == 'true' }}
+          make_latest: ${{ needs.parse_release_info.outputs.is_prerelease == 'false' }}
