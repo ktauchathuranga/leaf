@@ -15,4 +15,3 @@ pub fn print_info(msg: &str) {
 pub fn print_warning(msg: &str) {
     println!("{} {}", "⚠".yellow(), msg);
 }
-
