@@ -1,6 +1,6 @@
 [package]
 name = "leaf"
-version = "1.0.3-beta"
+version = "1.0.3"
 edition = "2024"
 build = "build.rs"
 
