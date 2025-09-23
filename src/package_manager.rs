@@ -377,7 +377,6 @@ impl PackageManager {
 
         Ok(())
     }
-
     pub async fn self_update(&self, version: Option<&str>, prerelease: bool) -> Result<()> {
         if version.is_some() && prerelease {
             return Err(anyhow::anyhow!(
@@ -425,7 +424,7 @@ impl PackageManager {
                 .into_iter()
                 .filter(|r| {
                     if prerelease {
-                        true // Include all releases
+                        r["prerelease"].as_bool().unwrap_or(false) // Only prerelease versions
                     } else {
                         !r["prerelease"].as_bool().unwrap_or(false) // Only stable releases
                     }
@@ -436,7 +435,13 @@ impl PackageManager {
                         .unwrap_or("")
                         .cmp(b["published_at"].as_str().unwrap_or(""))
                 })
-                .ok_or_else(|| anyhow::anyhow!("No releases found"))?
+                .ok_or_else(|| {
+                    if prerelease {
+                        anyhow::anyhow!("No prerelease versions found")
+                    } else {
+                        anyhow::anyhow!("No stable releases found")
+                    }
+                })?
         };
 
         let target_version = target_release["tag_name"]

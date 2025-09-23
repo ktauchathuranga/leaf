@@ -50,4 +50,3 @@ impl Config {
         Ok(config)
     }
 }
-
