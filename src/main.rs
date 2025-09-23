@@ -52,7 +52,22 @@ async fn main() {
                         .action(clap::ArgAction::SetTrue),
                 ),
         )
-        .subcommand(Command::new("self-update").about("Update the leaf package manager itself"))
+        .subcommand(
+            Command::new("self-update")
+                .about("Update the leaf package manager itself")
+                .arg(
+                    Arg::new("version")
+                        .long("version")
+                        .help("Update to specific version (e.g., v1.2.3 or v1.2.3-beta)")
+                        .num_args(1),
+                )
+                .arg(
+                    Arg::new("prerelease")
+                        .long("prerelease")
+                        .help("Update to the latest prerelease version")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
         .get_matches();
 
     let mut pm = match PackageManager::new().await {
@@ -82,7 +97,11 @@ async fn main() {
             let confirmed = sub_matches.get_flag("confirmed");
             pm.nuke_everything(confirmed).await
         }
-        Some(("self-update", _)) => pm.self_update().await,
+        Some(("self-update", sub_matches)) => {
+            let version = sub_matches.get_one::<String>("version").map(|s| s.as_str());
+            let prerelease = sub_matches.get_flag("prerelease");
+            pm.self_update(version, prerelease).await
+        }
         _ => {
             print_error("Unknown command");
             Ok(())

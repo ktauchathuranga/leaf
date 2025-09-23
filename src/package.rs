@@ -15,15 +15,9 @@ pub struct PlatformDetails {
     #[serde(rename = "type")]
     pub package_type: Option<String>,
     pub executables: Option<serde_json::Value>,
+    // Add build commands for "build" type packages
+    pub build_commands: Option<Vec<String>>,
 }
-
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct InstallInfo {
-//     pub name: String,
-//     pub version: String,
-//     pub installed_files: Vec<String>,
-//     pub executables: Option<serde_json::Value>,
-// }
 
 impl PlatformDetails {
     pub fn get_executables(&self) -> Vec<ExecutableInfo> {
@@ -51,6 +45,11 @@ impl PlatformDetails {
                 .collect(),
             _ => vec![],
         }
+    }
+
+    // Add method to get build commands
+    pub fn get_build_commands(&self) -> Vec<String> {
+        self.build_commands.clone().unwrap_or_default()
     }
 }
 

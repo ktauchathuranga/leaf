@@ -204,5 +204,65 @@
         ]
       }
     }
+  },
+  "git": {
+    "description": "Git distributed version control system built from source",
+    "version": "2.47.0",
+    "tags": [
+      "vcs",
+      "git",
+      "development",
+      "build"
+    ],
+    "platforms": {
+      "linux-x86_64": {
+        "url": "https://github.com/git/git/archive/refs/tags/v2.47.0.tar.gz",
+        "type": "build",
+        "build_commands": [
+          "make configure",
+          "./configure --prefix=$PWD/install",
+          "make all",
+          "make install"
+        ],
+        "executables": [
+          {
+            "path": "install/bin/git",
+            "name": "git"
+          },
+          {
+            "path": "install/bin/git-upload-pack",
+            "name": "git-upload-pack"
+          },
+          {
+            "path": "install/bin/git-receive-pack",
+            "name": "git-receive-pack"
+          }
+        ]
+      },
+      "linux-aarch64": {
+        "url": "https://github.com/git/git/archive/refs/tags/v2.47.0.tar.gz",
+        "type": "build",
+        "build_commands": [
+          "make configure",
+          "./configure --prefix=$PWD/install",
+          "make all",
+          "make install"
+        ],
+        "executables": [
+          {
+            "path": "install/bin/git",
+            "name": "git"
+          },
+          {
+            "path": "install/bin/git-upload-pack",
+            "name": "git-upload-pack"
+          },
+          {
+            "path": "install/bin/git-receive-pack",
+            "name": "git-receive-pack"
+          }
+        ]
+      }
+    }
   }
 }
