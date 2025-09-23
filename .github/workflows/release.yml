@@ -19,17 +19,39 @@ jobs:
     outputs:
       should_release: ${{ steps.get_tag.outputs.should_release }}
       tag: ${{ steps.get_tag.outputs.tag }}
+      is_prerelease: ${{ steps.get_tag.outputs.is_prerelease }}
+      release_type: ${{ steps.get_tag.outputs.release_type }}
     steps:
       - name: Get tag from PR body
         id: get_tag
         run: |
-          TAG=$(echo "${{ github.event.pull_request.body }}" | grep -oP '#release\s+\K(v[0-9]+\.[0-9]+\.[0-9]+)')
+          TAG=$(echo "${{ github.event.pull_request.body }}" | grep -oP '#release\s+\K(v[0-9]+\.[0-9]+\.[0-9]+(?:-(?:alpha|beta|rc)\d*)?)')
           if [ -n "$TAG" ]; then
             echo "Found release tag: $TAG"
             echo "should_release=true" >> $GITHUB_OUTPUT
             echo "tag=$TAG" >> $GITHUB_OUTPUT
+            
+            # Determine if this is a prerelease and what type
+            if [[ "$TAG" == *"-alpha"* ]]; then
+              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+              echo "release_type=alpha" >> $GITHUB_OUTPUT
+              echo "Detected alpha release"
+            elif [[ "$TAG" == *"-beta"* ]]; then
+              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+              echo "release_type=beta" >> $GITHUB_OUTPUT
+              echo "Detected beta release"
+            elif [[ "$TAG" == *"-rc"* ]]; then
+              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+              echo "release_type=rc" >> $GITHUB_OUTPUT
+              echo "Detected release candidate"
+            else
+              echo "is_prerelease=false" >> $GITHUB_OUTPUT
+              echo "release_type=stable" >> $GITHUB_OUTPUT
+              echo "Detected stable release"
+            fi
           else
-            echo "No release tag found in PR body. Skipping release."
+            echo "No valid release tag found in PR body. Skipping release."
+            echo "Expected format: #release v1.2.3 or #release v1.2.3-beta or #release v1.2.3-alpha or #release v1.2.3-rc"
             echo "should_release=false" >> $GITHUB_OUTPUT
           fi
 
@@ -121,41 +143,79 @@ jobs:
       with:
         path: ./artifacts
 
+    - name: Generate release body
+      id: release_body
+      run: |
+        TAG="${{ needs.parse_release_info.outputs.tag }}"
+        RELEASE_TYPE="${{ needs.parse_release_info.outputs.release_type }}"
+        IS_PRERELEASE="${{ needs.parse_release_info.outputs.is_prerelease }}"
+        
+        # Create appropriate release body based on release type
+        if [ "$IS_PRERELEASE" = "true" ]; then
+          case "$RELEASE_TYPE" in
+            "alpha")
+              RELEASE_TITLE="Alpha Release"
+              WARNING="⚠️ **This is an alpha release** - Expect bugs and breaking changes. Not recommended for production use."
+              ;;
+            "beta")
+              RELEASE_TITLE="Beta Release"
+              WARNING="⚠️ **This is a beta release** - Feature complete but may contain bugs. Use with caution in production."
+              ;;
+            "rc")
+              RELEASE_TITLE="Release Candidate"
+              WARNING="🚧 **This is a release candidate** - Stable but awaiting final testing. Suitable for testing environments."
+              ;;
+          esac
+        else
+          RELEASE_TITLE="Stable Release"
+          WARNING=""
+        fi
+        
+        # Build the release body
+        BODY="## Leaf Package Manager $TAG
+
+$WARNING
+
+A simple, sudo-free package manager for Linux, written in Rust.
+
+**These are statically linked binaries with no system dependencies.**
+
+### Installation
+
+**Linux (any distribution):**
+\`\`\`bash
+curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
+\`\`\`
+
+Or with wget:
+\`\`\`bash
+wget -qO- https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
+\`\`\`
+
+### Supported Architectures
+- x86_64 (Intel/AMD 64-bit) - Static binary
+- aarch64 (ARM 64-bit) - Static binary
+
+### Features
+- No system dependencies required
+- Works on any Linux distribution
+- Minimal container compatible (even scratch/distroless)
+
+### Changes in this release
+See merged pull requests for details."
+
+        # Save to file (GitHub Actions has issues with multiline strings in outputs)
+        echo "$BODY" > release_body.md
+        
+        echo "release_title=$RELEASE_TITLE" >> $GITHUB_OUTPUT
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ needs.parse_release_info.outputs.tag }}
-        name: Release ${{ needs.parse_release_info.outputs.tag }}
-        files: ./artifacts/**/*.* 
-        body: |
-          ## Leaf Package Manager ${{ needs.parse_release_info.outputs.tag }}
-
-          A simple, sudo-free package manager for Linux, written in Rust.
-          
-          **These are statically linked binaries with no system dependencies.**
-
-          ### Installation
-
-          **Linux (any distribution):**
-          ```bash
-          curl -sSL https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
-          ```
-          
-          Or with wget:
-          ```bash
-          wget -qO- https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh | bash
-          ```
-
-          ### Supported Architectures
-          - x86_64 (Intel/AMD 64-bit) - Static binary
-          - aarch64 (ARM 64-bit) - Static binary
-
-          ### Features
-          - No system dependencies required
-          - Works on any Linux distribution
-          - Minimal container compatible (even scratch/distroless)
-
-          ### Changes in this release
-          See merged pull requests for details.
+        name: ${{ steps.release_body.outputs.release_title }} ${{ needs.parse_release_info.outputs.tag }}
+        files: ./artifacts/**/*.*
+        body_path: release_body.md
         draft: false
-        prerelease: false
+        prerelease: ${{ needs.parse_release_info.outputs.is_prerelease == 'true' }}
+        make_latest: ${{ needs.parse_release_info.outputs.is_prerelease == 'false' }}

@@ -378,17 +378,98 @@ impl PackageManager {
         Ok(())
     }
 
-    pub async fn self_update(&self) -> Result<()> {
+    pub async fn self_update(&self, version: Option<&str>, prerelease: bool) -> Result<()> {
+        if version.is_some() && prerelease {
+            return Err(anyhow::anyhow!(
+                "Cannot specify both --version and --prerelease"
+            ));
+        }
+
         print_info("Checking for new version of Leaf...");
 
-        let install_script_url =
-            "https://raw.githubusercontent.com/ktauchathuranga/leaf/main/install.sh";
+        let client = reqwest::Client::builder()
+            .user_agent("leaf-package-manager/1.0.0")
+            .build()?;
+
+        let releases_url = "https://api.github.com/repos/ktauchathuranga/leaf/releases";
+        let response = client
+            .get(releases_url)
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Failed to fetch releases: HTTP {}",
+                response.status()
+            ));
+        }
+
+        let releases: Vec<serde_json::Value> = response.json().await?;
+
+        let current_version = env!("CARGO_PKG_VERSION");
+        let target_release = if let Some(v) = version {
+            // Handle specific version
+            let requested_version = v.trim_start_matches('v');
+            releases
+                .into_iter()
+                .find(|r| {
+                    r["tag_name"]
+                        .as_str()
+                        .map_or(false, |t| t == v || t == requested_version)
+                })
+                .ok_or_else(|| anyhow::anyhow!("Version {} not found", v))?
+        } else {
+            // Find latest stable or prerelease
+            releases
+                .into_iter()
+                .filter(|r| {
+                    if prerelease {
+                        true // Include all releases
+                    } else {
+                        !r["prerelease"].as_bool().unwrap_or(false) // Only stable releases
+                    }
+                })
+                .max_by(|a, b| {
+                    a["published_at"]
+                        .as_str()
+                        .unwrap_or("")
+                        .cmp(b["published_at"].as_str().unwrap_or(""))
+                })
+                .ok_or_else(|| anyhow::anyhow!("No releases found"))?
+        };
+
+        let target_version = target_release["tag_name"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid release data: missing tag_name"))?;
+
+        if target_version.trim_start_matches('v') == current_version && version.is_none() {
+            print_info("You are already running the latest version");
+            return Ok(());
+        }
+
+        if target_release["prerelease"].as_bool().unwrap_or(false) {
+            print_warning("Installing a prerelease version of Leaf");
+        }
+
+        print_info(&format!(
+            "Updating from v{} to {}",
+            current_version, target_version
+        ));
+
+        let install_script_url = format!(
+            "https://raw.githubusercontent.com/ktauchathuranga/leaf/{}/install.sh",
+            target_version
+        );
 
         print_info("Running the installation/update script...");
 
         let status = std::process::Command::new("sh")
             .arg("-c")
-            .arg(format!("curl -sSL {} | bash", install_script_url))
+            .arg(format!(
+                "curl -sSL {} | bash -s -- --version {}",
+                install_script_url, target_version
+            ))
             .status()
             .with_context(|| "Failed to start the update process.")?;
 
@@ -476,4 +557,3 @@ mod tests {
         );
     }
 }
-
