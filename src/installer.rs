@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::package::{Package, PlatformDetails};
+use crate::utils::{print_info, print_step, print_success};
 use anyhow::{Result, anyhow};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -110,7 +111,7 @@ impl Installer {
 
         match package_type {
             "archive" => {
-                println!("[-] Extracting archive...");
+                print_step("Extracting archive...");
                 let extract_path = package_dir.clone();
                 tokio::task::spawn_blocking(move || {
                     extract_archive_sync(&cache_file_path, &extract_path)
@@ -118,7 +119,7 @@ impl Installer {
                 .await??;
             }
             "binary" => {
-                println!("[-] Installing binary...");
+                print_step("Installing binary...");
                 let executables = platform_details.get_executables();
                 let executable = executables.get(0).ok_or_else(|| {
                     anyhow!("Binary package '{}' has no executables listed", name)
@@ -137,7 +138,7 @@ impl Installer {
                 fs::set_permissions(&dest_path, perms).await?;
             }
             "build" => {
-                println!("[-] Building from source...");
+                print_step("Building from source...");
                 self.build_from_source(name, platform_details, &cache_file_path, &package_dir)
                     .await?;
             }
@@ -146,7 +147,7 @@ impl Installer {
             }
         }
 
-        println!("✅ Installation complete for '{}'", name);
+        print_success(&format!("Installation complete for '{}'", name));
         Ok(())
     }
 
@@ -162,7 +163,7 @@ impl Installer {
         fs::create_dir_all(&build_dir).await?;
 
         // Extract source code to build directory
-        println!("[-] Extracting source code...");
+        print_step("Extracting source code...");
         tokio::task::spawn_blocking({
             let cache_file_path = cache_file_path.to_path_buf();
             let build_dir = build_dir.clone();
@@ -183,9 +184,9 @@ impl Installer {
         let source_dir = self.find_source_directory(&build_dir).await?;
 
         // Execute build commands
-        println!("[-] Running build commands...");
+        print_step("Running build commands...");
         for (i, command) in build_commands.iter().enumerate() {
-            println!("  Step {}/{}: {}", i + 1, build_commands.len(), command);
+            print_info(&format!("Step {}/{}: {}", i + 1, build_commands.len(), command));
 
             let output = Command::new("sh")
                 .arg("-c")
@@ -206,7 +207,7 @@ impl Installer {
         }
 
         // Copy built executables to package directory
-        println!("[-] Installing built executables...");
+        print_step("Installing built executables...");
         for executable_info in platform_details.get_executables() {
             let source_exe = source_dir.join(&executable_info.path);
             let dest_exe = package_dir.join(&executable_info.path);
@@ -279,16 +280,16 @@ impl Installer {
 
         // If file already exists in cache, skip download
         if filepath.exists() {
-            println!("Found {} in cache", safe_filename);
+            print_info(&format!("Found {} in cache", safe_filename));
             return Ok(filepath);
         }
 
-        println!("Downloading {}", safe_filename);
+        print_info(&format!("Downloading {}", safe_filename));
         let pb = ProgressBar::new(total_size);
         pb.set_style(
             ProgressStyle::default_bar()
-                .template("  [-] [{bar:30}] {percent}% ({bytes}/{total_bytes})")?
-                .progress_chars("█▓░"),
+                .template("  [{bar:30}] {percent}% ({bytes}/{total_bytes})")?
+                .progress_chars("█▉▊"),
         );
 
         let mut file = File::create(&filepath).await?;

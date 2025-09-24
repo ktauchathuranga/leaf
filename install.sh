@@ -12,13 +12,15 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Print functions
-info() { echo -e "${BLUE}[-] $1${NC}"; }
-success() { echo -e "${GREEN}[✓] $1${NC}"; }
-warning() { echo -e "${YELLOW}[!] $1${NC}"; }
-error() { echo -e "${RED}[!] $1${NC}"; exit 1; }
+info() { echo -e "${BLUE}${BOLD}[INFO]${NC} $1"; }
+success() { echo -e "${GREEN}${BOLD}[SUCCESS]${NC} $1"; }
+warning() { echo -e "${YELLOW}${BOLD}[WARNING]${NC} $1"; }
+error() { echo -e "${RED}${BOLD}[ERROR]${NC} $1"; exit 1; }
+step() { echo -e "${BLUE}${BOLD}[STEP]${NC} $1"; }
 
 # Check if running on Linux
 if [[ "$(uname -s)" != "Linux" ]]; then
@@ -138,7 +140,7 @@ get_release_info() {
 }
 
 # Get the release info
-info "Finding release..."
+step "Finding release..."
 if [ -n "$REQUESTED_VERSION" ]; then
     info "Requesting specific version: $REQUESTED_VERSION"
     RELEASE_INFO=$(get_release_info "$REQUESTED_VERSION")
@@ -185,7 +187,7 @@ fi
 # Show release information
 if [ "$IS_PRERELEASE" = "true" ]; then
     warning "Found prerelease version: $LATEST_VERSION"
-    warning "⚠️ WARNING: This is a prerelease version that may contain bugs"
+    warning "This is a prerelease version that may contain bugs"
 else
     info "Found stable version: $LATEST_VERSION"
 fi
@@ -199,7 +201,7 @@ fi
 info "Target version: $LATEST_VERSION. Current version: $CURRENT_VERSION."
 
 # Download with progress bar
-info "Downloading leaf binary..."
+step "Downloading leaf binary..."
 TEMP_DIR=$(mktemp -d)
 TEMP_FILE="$TEMP_DIR/$ASSET_NAME"
 if command -v curl >/dev/null 2>&1; then
@@ -211,7 +213,7 @@ else
 fi
 
 # Extract and install
-info "Extracting binary..."
+step "Extracting binary..."
 cd "$TEMP_DIR"
 tar -xzf "$ASSET_NAME"
 NEW_LEAF_BIN="$TEMP_DIR/leaf"
@@ -219,7 +221,7 @@ CURRENT_LEAF_BIN="$BIN_DIR/leaf"
 OLD_LEAF_BIN="$BIN_DIR/leaf.old"
 
 if [ -f "$CURRENT_LEAF_BIN" ]; then
-    info "Replacing current binary..."
+    step "Replacing current binary..."
     mv "$CURRENT_LEAF_BIN" "$OLD_LEAF_BIN"
 fi
 
@@ -227,7 +229,7 @@ mv "$NEW_LEAF_BIN" "$CURRENT_LEAF_BIN"
 chmod +x "$CURRENT_LEAF_BIN"
 
 # Download package definitions
-info "Downloading package definitions..."
+step "Downloading package definitions..."
 fetch_data "https://raw.githubusercontent.com/$REPO/main/packages.json" > "$LEAF_DIR/packages.json"
 
 # Add to PATH if not already there
@@ -245,6 +247,7 @@ if [ -f "$SHELL_RC" ] && ! grep -q "$BIN_DIR" "$SHELL_RC"; then
 fi
 
 # Create/update leaf config
+step "Creating configuration..."
 cat > "$LEAF_DIR/config.json" << EOF
 {
     "version": "$LATEST_VERSION",
@@ -265,7 +268,7 @@ if "$BIN_DIR/leaf" --version >/dev/null 2>&1; then
     success "Leaf Package Manager installed/updated successfully!"
     success "Version: $VERSION_INFO"
     if [ "$IS_PRERELEASE" = "true" ]; then
-        warning "⚠️ You are running a prerelease version"
+        warning "You are running a prerelease version"
     fi
 else
     error "Installation completed but leaf command test failed"

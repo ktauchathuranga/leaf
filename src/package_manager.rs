@@ -223,7 +223,7 @@ impl PackageManager {
             return Ok(());
         }
 
-        println!("Installed packages:");
+        print_info("Installed packages:");
         for (name, package) in &self.installed {
             println!("  {} - {} ({})", name, package.description, package.version);
         }
@@ -260,7 +260,7 @@ impl PackageManager {
             return Ok(());
         }
 
-        println!("Found {} package(s):", found.len());
+        print_info(&format!("Found {} package(s):", found.len()));
         for (name, package) in found {
             let installed = if self.installed.contains_key(name) {
                 " [INSTALLED]"
@@ -368,7 +368,7 @@ impl PackageManager {
             ));
         }
 
-        print_success("🍃 Leaf and all packages have been nuked!");
+        print_success("Leaf and all packages have been nuked!");
         print_info("To complete the uninstallation, please remove the executable:");
         print_info(&format!(
             "  rm {}",
@@ -532,9 +532,9 @@ mod tests {
                 match response {
                     Ok(res) => {
                         if res.status().is_success() {
-                            println!("  ✓ Success ({})", res.status());
+                            println!("  Success ({})", res.status());
                         } else {
-                            println!("  ✗ Failure ({})", res.status());
+                            println!("  Failure ({})", res.status());
                             failed_urls.push(format!(
                                 "'{}' on '{}': {} (Status: {})",
                                 name,
@@ -545,7 +545,7 @@ mod tests {
                         }
                     }
                     Err(e) => {
-                        println!("  ✗ Network Error: {}", e);
+                        println!("  Network Error: {}", e);
                         failed_urls.push(format!(
                             "'{}' on '{}': {} (Error: {})",
                             name, platform, url, e
