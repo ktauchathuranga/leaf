@@ -5,7 +5,7 @@ mod package_manager;
 mod utils;
 
 use crate::package_manager::PackageManager;
-use crate::utils::print_error;
+use crate::utils::{print_error, print_info};
 use clap::{Arg, Command};
 use std::process;
 
@@ -70,8 +70,13 @@ async fn main() {
         )
         .get_matches();
 
+    print_info("Initializing Leaf package manager...");
+
     let mut pm = match PackageManager::new().await {
-        Ok(pm) => pm,
+        Ok(pm) => {
+            print_info("Package manager initialized successfully");
+            pm
+        }
         Err(e) => {
             print_error(&format!("Failed to initialize package manager: {}", e));
             process::exit(1);
@@ -103,13 +108,13 @@ async fn main() {
             pm.self_update(version, prerelease).await
         }
         _ => {
-            print_error("Unknown command");
+            print_error("Unknown command received");
             Ok(())
         }
     };
 
     if let Err(e) = result {
-        print_error(&format!("Error: {}", e));
+        print_error(&format!("Command execution failed: {}", e));
         process::exit(1);
     }
 }
